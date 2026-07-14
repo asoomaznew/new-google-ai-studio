@@ -14,7 +14,7 @@ const clinics = [
     { name: "AL ASEEL INTERNATIONAL POLYCLINIC", kib: "KIBAA-2380", warba: "WTAA-61012", offset: "50-000010", property: "CLO3", dept: "113", proj: "104", activities: "1194" },
     { name: "IRIS POLYCLINIC", kib: "KIBIR-2282", warba: "WRIR-73018", offset: "50-000004", property: "CLO3", dept: "113", proj: "104", activities: "1193" },
     { name: "YARROW POLYCLINIC", kib: "KIBYR-4765", warba: "WRYR-67011", offset: "50-000005", property: "CLO3", dept: "113", proj: "104", activities: "1198" },
-    { name: "MEWL POLYCLINIC", kib: "KIBML-6601", warba: "KIBML-6601", offset: "50-000011", property: "CLO4", dept: "113", proj: "104", activities: "1205" },
+    { name: "MEDWELL POLYCLINIC", kib: "KIBML-6601", warba: "KIBML-6601", offset: "50-000011", property: "CLO4", dept: "113", proj: "104", activities: "1205" },
     { name: "FOURTH MEDICAL CENTER", kib: "KIBFR-8602", warba: "WRFM-55018", offset: "50-000009", property: "CLO5", dept: "113", proj: "104", activities: "1195" },
     { name: "JOYA POLYCLINIC", kib: "KIBJY-2258", warba: "WRJY-10018", offset: "50-000002", property: "CLO6", dept: "113", proj: "104", activities: "1197" },
     { name: "MEDICAL HARBOUR CENTER", kib: "KIBMH-2231", warba: "WRMH-86019", offset: "50-000008", property: "CLO6", dept: "113", proj: "104", activities: "1196" },

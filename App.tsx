@@ -43,12 +43,13 @@ import MergePdfsAutomation from "./components/MergePdfsAutomation";
 import POSEntryAutomation from "./components/POSEntryAutomation";
 import POSReport from "./components/POSReport";
 import SmartMergeAutomation from "./components/SmartMergeAutomation";
+import BahrainCustPaymentAutomation from "./components/BahrainCustPaymentAutomation";
 import { getAnswerFromText } from "./services/geminiService";
 import Chatbot from "./components/Chatbot";
 
 import Convert001To49Automation from "./components/Convert001To49Automation";
 import {
-  Home, Stethoscope, Briefcase, FileSearch, MessageSquare, RefreshCw, Calculator, FileStack, Receipt, FileBarChart, Sparkles, Tags
+  Home, Stethoscope, Briefcase, FileSearch, MessageSquare, RefreshCw, Calculator, FileStack, Receipt, FileBarChart, Sparkles, Tags, FileText
 } from "lucide-react";
 
 // pdf.js is loaded from an import map, not a global script
@@ -67,7 +68,8 @@ type AppMode =
   | "merge_pdfs"
   | "pos_entry"
   | "pos_report"
-  | "smart_merge";
+  | "smart_merge"
+  | "bahrain_cust_payment";
 
 // --- PDF Q&A Components ---
 
@@ -1388,6 +1390,7 @@ export default function App() {
       { id: "pos_entry", name: "POS Entry", icon: <Receipt className="w-8 h-8"/>, desc: "Process POS terminal entries" },
       { id: "pos_report", name: "POS Report", icon: <FileBarChart className="w-8 h-8"/>, desc: "Generate Point of Sale reports" },
       { id: "smart_merge", name: "Smart Merge", icon: <Sparkles className="w-8 h-8"/>, desc: "AI-powered PDF merging and sorting" },
+      { id: "bahrain_cust_payment", name: "Bahrain CustPayment", icon: <FileText className="w-8 h-8"/>, desc: "Process emails to Excel for Bahrain CustPayment" },
     ];
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
@@ -1467,6 +1470,7 @@ export default function App() {
         {mode === "pos_entry" && <POSEntryAutomation />}
         {mode === "pos_report" && <POSReport />}
         {mode === "smart_merge" && <SmartMergeAutomation />}
+        {mode === "bahrain_cust_payment" && <BahrainCustPaymentAutomation />}
 
         <Chatbot currentMode={mode} />
 

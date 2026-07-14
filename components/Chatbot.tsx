@@ -51,20 +51,38 @@ export default function Chatbot({ currentMode }: ChatbotProps) {
           body: JSON.stringify({
             chatId,
             message: userMsg.text,
-            model: 'gemini-3.5-flash',
+            model: 'gemini-3.1-flash-lite',
             systemInstruction
           })
         });
 
         if (!response.ok) {
-          throw new Error(await response.text());
+          let errText = await response.text();
+          let parsedErrorMsg = errText;
+          try {
+             const parsed = JSON.parse(errText);
+             if (parsed.error) {
+               parsedErrorMsg = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+               try {
+                   const inner = JSON.parse(parsedErrorMsg);
+                   if (inner.error && inner.error.message) {
+                       parsedErrorMsg = inner.error.message;
+                   }
+               } catch (e) {}
+             }
+          } catch(e) {}
+          throw new Error(parsedErrorMsg);
         }
         
         const data = await response.json();
         setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: data.text }]);
       }
     } catch (error: any) {
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'error', text: 'Error: ' + error.message }]);
+      let displayMsg = error.message;
+      if (displayMsg.includes("API_KEY is required") || displayMsg.includes("API key not valid") || displayMsg.includes("API key must be active")) {
+         displayMsg = "Invalid API Key. Please update your Gemini API Key in the Settings.";
+      }
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'error', text: displayMsg }]);
     } finally {
       setIsLoading(false);
     }

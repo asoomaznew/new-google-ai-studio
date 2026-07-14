@@ -7,8 +7,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "tsx server.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
@@ -16,6 +17,9 @@
     "@google/genai": "^1.9.0",
     "@heroicons/react": "^2.2.0",
     "@types/papaparse": "^5.5.2",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "firebase": "^12.16.0",
     "jszip": "3.10.1",
     "lucide-react": "^1.14.0",
     "papaparse": "^5.5.3",
@@ -27,8 +31,12 @@
     "xlsx": "latest"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.22.4",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
@@ -183,11 +191,13 @@ root.render(
  FILE: metadata.json
 ========================================
 {
-  "name": "Remix:  Entry Automation v4-2-final",
+  "name": "Remix: Entry Automation-update",
   "description": "Automate journal entries (POS 50/49, Merchant, Warba), extract ending balances, merge PDFs, and intelligently rename files from bank statements.",
   "requestFramePermissions": [],
   "prompt": "",
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
 
 ========================================
@@ -306,9 +316,9 @@ export const CLOVER_BANK_INFO: CloverBankInfo[] = [
     { accountName: "YARROW POLYCLINIC", oldAccountNo: "011010234765", accountNo: "KIBYR-4765", activities: "1198", propertyId: "CLO3", country: "01", departments: "113", projectId: "104" },
     { accountName: "YARROW POLYCLINIC", oldAccountNo: "011010234773", accountNo: "KIBYR-4773", activities: "1198", propertyId: "CLO3", country: "01", departments: "113", projectId: "104" },
     
-    // MEWL POLYCLINIC
-    { accountName: "MEWL POLYCLINIC", oldAccountNo: "011010236601", accountNo: "KIBML-6601", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
-    { accountName: "MEWL POLYCLINIC", oldAccountNo: "011010236610", accountNo: "KIBML-6610", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
+    // MEDWELL POLYCLINIC
+    { accountName: "MEDWELL POLYCLINIC", oldAccountNo: "011010236601", accountNo: "KIBML-6601", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
+    { accountName: "MEDWELL POLYCLINIC", oldAccountNo: "011010236610", accountNo: "KIBML-6610", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
     
     // FOURTH MEDICAL CENTER
     { accountName: "FOURTH MEDICAL CENTER", oldAccountNo: "011010198602", accountNo: "KIBFR-8602", activities: "1195", propertyId: "CLO5", country: "01", departments: "113", projectId: "104" },
@@ -350,7 +360,9 @@ export const VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",
@@ -393,7 +405,7 @@ export const WARBA_BANK_INFO: CloverBankInfo[] = [
         projectId: "104" 
     },
     { 
-        accountName: "MEWL POLYCLINIC", 
+        accountName: "MEDWELL POLYCLINIC", 
         oldAccountNo: "11010236601", 
         accountNo: "KIBML-6601", 
         activities: "1205", 
@@ -478,7 +490,9 @@ export const WARBA_VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",
@@ -578,7 +592,7 @@ export const WARBA_BANK_INFO: CloverBankInfo[] = [
         projectId: "104" 
     },
     { 
-        accountName: "MEWL POLYCLINIC", 
+        accountName: "MEDWELL POLYCLINIC", 
         oldAccountNo: "11010236601", 
         accountNo: "KIBML-6601", 
         activities: "1205", 
@@ -663,7 +677,9 @@ export const WARBA_VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",
@@ -676,15 +692,238 @@ export const WARBA_VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
 
 
 ========================================
+ FILE: services/bahrainCustPaymentService.ts
+========================================
+import { generateContentWithRetry } from './geminiService';
+import * as pdfjsLib from 'pdfjs-dist';
+
+export interface ExtractedRow {
+  pdate: string;
+  unit: string;
+  ccode: string;
+  cname: string;
+  desc: string;
+  amt: number;
+  force: "Rent" | "EWA";
+}
+
+export interface ExtractedData {
+  rows: ExtractedRow[];
+}
+
+export interface ProcessingResult {
+  fileName: string;
+  success: boolean;
+  extractedData?: ExtractedData;
+  error?: string;
+}
+
+const CUSTOMER_MASTER: Record<string, { code: string, name: string }> = {
+  "BHW1-C-12": { code: "24-000033", name: "Savon Company WLL" },
+  "BHW1-C-25": { code: "24-000032", name: "Crown Gold W.L.L" },
+  "BHW1-C-21": { code: "24-000035", name: "Baraka Sweets Factory" },
+  "BHW1-B-14": { code: "24-000037", name: "Rare Fitness Equipment Co." },
+  "BHW1-C-11": { code: "24-000039", name: "Sofia Industrial Company" },
+  "BHW1-C-1": { code: "24-000001", name: "Red Finishing W.L.L." },
+  "BHW1-C-10": { code: "24-000028", name: "Unigulf Air-Conditioning Trading Co." },
+  "BHW1-C-3": { code: "24-000042", name: "Al-Hosn Trading Est." },
+  "BHW1-B-2": { code: "24-000044", name: "Upstream Global For Technical Solutions" },
+  "BHW1-A-5": { code: "24-000045", name: "Blue Line Factory W.L.L" },
+  "BHW1-C-26": { code: "24-000023", name: "Naffco" },
+  "BHW1-B-15": { code: "24-000020", name: "Majestic Cars Center" },
+  "BHW1-C-22": { code: "24-000020", name: "Majestic Cars Center" },
+  "BHW1-A-6": { code: "24-000010", name: "Shahia Food Limited Company W.L.L." },
+  "BHW1-C-23": { code: "24-000028", name: "Unigulf Air-Conditioning Trading Co." },
+  "BHW1-B-8": { code: "24-000005", name: "Mira Packaging Factory" },
+  "BHW1-B-4": { code: "24-000045", name: "Blue Line Factory W.L.L" },
+  "BHW1-B-20": { code: "24-000048", name: "MADI INTERNATIONAL CO LLC" },
+  "BHW1-B-19": { code: "24-000034", name: "Lalaplast Manufacturing Biodegradable Plastics" },
+  "BHW1-C-7": { code: "24-000030", name: "Abbas Hassan Ali Bin Saleh (Bin Saleh Industrial Service)" },
+  "bhw1-b-36&37": { code: "24-000050", name: "German Standard Veterinary Medicines Trading Co., W.L.L." },
+  "BHW1-C-13": { code: "24-000047", name: "SAMAR MARINE SERVICES W.L.L" },
+  "BHW1-C-9": { code: "24-000053", name: "WAED INDUSTRIAL INNOVATION COMPANY W.L.L" }
+};
+
+export async function processBahrainFiles(
+  files: File[],
+  onProgress: (msg: string) => void
+): Promise<ProcessingResult[]> {
+  const results: ProcessingResult[] = [];
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    onProgress(`Processing ${i+1}/${files.length}: ${file.name}`);
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = "";
+      for (let j = 1; j <= pdf.numPages; j++) {
+        const page = await pdf.getPage(j);
+        const textContent = await page.getTextContent();
+        fullText += textContent.items.map((item: any) => item.str).join(" ") + "\\n";
+      }
+      
+      onProgress(`Analyzing ${file.name} with AI...`);
+      
+      // Call Gemini API
+      const prompt = `
+You are an expert at extracting payment advice information from emails.
+Analyze the following email text and extract the payment breakdown.
+
+Email Text:
+${fullText}
+
+Available Customer Master (Unit -> Code/Name):
+${JSON.stringify(CUSTOMER_MASTER, null, 2)}
+
+Instructions:
+1. Identify the Customer Name and the Unit number/ID.
+2. Match the Unit with the exact key in the Available Customer Master (e.g. "BHW1-C-9"). If the text just says "unit 9" and the company is Waed Industrial, it maps to "BHW1-C-9". If the text mentions the company and unit, figure out the key from the master list.
+3. Extract each line item (usually Rent and EWA).
+4. For each item, extract the amount (number), the date (format DD-MM-YYYY, e.g. "07-07-2026", convert month names to numbers if necessary), and the description.
+5. Set 'force' to "Rent" or "EWA" based on the description.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "rows": [
+    {
+      "pdate": "07-07-2026", // payment date (DD-MM-YYYY)
+      "unit": "BHW1-C-9", // matched key from CUSTOMER_MASTER
+      "ccode": "24-000053", // matched code from CUSTOMER_MASTER
+      "cname": "WAED INDUSTRIAL INNOVATION COMPANY W.L.L", // matched name from CUSTOMER_MASTER
+      "desc": "Rent July 2026 Billing", // Description of payment
+      "amt": 1188.00, // Amount as a number
+      "force": "Rent" // "Rent" or "EWA"
+    }
+  ]
+}
+`;
+
+      const response = await generateContentWithRetry({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+            temperature: 0.1,
+            responseMimeType: "application/json"
+        }
+      });
+      
+      const responseText = response.text;
+      if (!responseText) throw new Error("Empty response from Gemini");
+      
+      const data = JSON.parse(responseText);
+      
+      results.push({
+        fileName: file.name,
+        success: true,
+        extractedData: data
+      });
+      
+    } catch (err: any) {
+      console.error(`Error processing ${file.name}:`, err);
+      results.push({
+        fileName: file.name,
+        success: false,
+        error: err.message
+      });
+    }
+  }
+  
+  return results;
+}
+
+
+========================================
  FILE: services/balanceGeminiService.ts
 ========================================
 import { GoogleGenAI, Type } from "@google/genai";
+import { getLLMConfig, callLocalLLM } from "./localLlmService";
 
 if (!process.env.API_KEY) {
   console.error("API_KEY environment variable not set.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let aiInstance: GoogleGenAI | null = null;
+const getAi = (): GoogleGenAI => {
+    if (!aiInstance) {
+        const apiKey = process.env.API_KEY || "DUMMY_KEY_FOR_BUILD";
+        aiInstance = new GoogleGenAI({ apiKey });
+    }
+    return aiInstance;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const modelsChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+
+const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
+    const config = typeof window !== 'undefined' ? getLLMConfig() : { provider: 'gemini', baseUrl: '', modelName: '' };
+    if (config.provider === 'local') {
+        return callLocalLLM(aiParams.contents, aiParams.config?.responseSchema, config.modelName, config.baseUrl);
+    }
+
+    let attempt = 0;
+    let modelIndex = 0;
+    while (attempt < maxRetries) {
+        const originalModel = aiParams.model;
+        let currentModel = originalModel;
+        
+        if (modelsChain.includes(originalModel)) {
+            currentModel = modelsChain[Math.min(modelIndex, modelsChain.length - 1)];
+        }
+        
+        const params = { ...aiParams, model: currentModel };
+        
+        try {
+            return await getAi().models.generateContent(params);
+        } catch (error: any) {
+            console.error(`Gemini call failed with model ${currentModel}:`, error);
+            
+            const isPermissionOrNotFound = error?.status === 403 || 
+                                          error?.code === 403 || 
+                                          error?.message?.includes('403') || 
+                                          error?.message?.includes('permission') ||
+                                          error?.message?.includes('PERMISSION_DENIED') ||
+                                          error?.status === 404 ||
+                                          error?.code === 404 ||
+                                          error?.message?.includes('404') ||
+                                          error?.message?.includes('not found') ||
+                                          error?.message?.includes('NOT_FOUND');
+            
+            if (isPermissionOrNotFound) {
+                if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                    modelIndex++;
+                    console.warn(`Permission or Not Found error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                    continue; // Immediately try with the next model
+                }
+            }
+            
+            if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Quota exceeded') || error?.message?.includes('prepayment credits') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+                // If it's a prepayment depletion error, try falling back to next model (in case smaller models are free)
+                if (error?.message?.includes('prepayment credits') || error?.message?.includes('billing')) {
+                    if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                        modelIndex++;
+                        console.warn(`Billing error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                        continue; // Try next model immediately
+                    } else {
+                        throw new Error("Your Gemini API credits are depleted. Please update your API key or configure a Local LLM Provider in Settings.");
+                    }
+                }
+
+                const match = error?.message?.match(/Please retry in (\d+\.?\d*)s/);
+                const waitSeconds = match ? parseFloat(match[1]) : Math.pow(2, attempt) * 10;
+                console.warn(`Rate limit hit. Retrying in ${waitSeconds} seconds... (Attempt ${attempt + 1}/${maxRetries})`);
+                await delay(waitSeconds * 1000 + 1000); // Add 1 second buffer
+                attempt++;
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('Max retries exceeded for Gemini API.');
+};
 
 export const getEndingBalanceFromText = async (
   text: string,
@@ -743,7 +982,7 @@ export const getEndingBalanceFromText = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: model,
       contents: prompt,
       config: {
@@ -783,54 +1022,119 @@ export const getEndingBalanceFromText = async (
 import * as XLSX from 'xlsx';
 
 export const extractTextFromExcel = async (file: File): Promise<string> => {
-    const fileReader = new FileReader();
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        let fullText = "";
 
-    return new Promise((resolve, reject) => {
-        fileReader.onload = async (event) => {
-            if (!event.target?.result) {
-                return reject(new Error("Failed to read file."));
-            }
-
-            try {
-                const data = new Uint8Array(event.target.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                let fullText = "";
-
-                workbook.SheetNames.forEach((sheetName: string) => {
-                    const sheet = workbook.Sheets[sheetName];
-                    const sheetText = XLSX.utils.sheet_to_csv(sheet);
-                    fullText += sheetText + "\n";
-                });
-                
-                resolve(fullText);
-            } catch (error) {
-                if (error instanceof Error) {
-                    reject(new Error(`Excel processing error: ${error.message}`));
-                } else {
-                    reject(new Error("An unknown error occurred during Excel processing."));
-                }
-            }
-        };
-
-        fileReader.onerror = () => {
-            reject(new Error("Error reading file."));
-        };
-
-        fileReader.readAsArrayBuffer(file);
-    });
+        workbook.SheetNames.forEach((sheetName: string) => {
+            const sheet = workbook.Sheets[sheetName];
+            const sheetText = XLSX.utils.sheet_to_csv(sheet);
+            fullText += sheetText + "\n";
+        });
+        
+        return fullText;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Excel processing error: ${error.message}`);
+        } else {
+            throw new Error("An unknown error occurred during Excel processing.");
+        }
+    }
 };
+
 
 ========================================
  FILE: services/geminiService.ts
 ========================================
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { getLLMConfig, callLocalLLM } from "./localLlmService";
 
 if (!process.env.API_KEY) {
   console.error("API_KEY environment variable not set.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let aiInstance: GoogleGenAI | null = null;
+const getAi = (): GoogleGenAI => {
+    if (!aiInstance) {
+        const apiKey = process.env.API_KEY || "DUMMY_KEY_FOR_BUILD";
+        aiInstance = new GoogleGenAI({ apiKey });
+    }
+    return aiInstance;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const modelsChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+
+export const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
+    const config = typeof window !== 'undefined' ? getLLMConfig() : { provider: 'gemini', baseUrl: '', modelName: '' };
+    if (config.provider === 'local') {
+        return callLocalLLM(aiParams.contents, aiParams.config?.responseSchema, config.modelName, config.baseUrl);
+    }
+
+    let attempt = 0;
+    let modelIndex = 0;
+    while (attempt < maxRetries) {
+        const originalModel = aiParams.model;
+        let currentModel = originalModel;
+        
+        if (modelsChain.includes(originalModel)) {
+            currentModel = modelsChain[Math.min(modelIndex, modelsChain.length - 1)];
+        }
+        
+        const params = { ...aiParams, model: currentModel };
+        
+        try {
+            return await getAi().models.generateContent(params);
+        } catch (error: any) {
+            console.error(`Gemini call failed with model ${currentModel}:`, error);
+            
+            const isPermissionOrNotFound = error?.status === 403 || 
+                                          error?.code === 403 || 
+                                          error?.message?.includes('403') || 
+                                          error?.message?.includes('permission') ||
+                                          error?.message?.includes('PERMISSION_DENIED') ||
+                                          error?.status === 404 ||
+                                          error?.code === 404 ||
+                                          error?.message?.includes('404') ||
+                                          error?.message?.includes('not found') ||
+                                          error?.message?.includes('NOT_FOUND');
+            
+            if (isPermissionOrNotFound) {
+                if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                    modelIndex++;
+                    console.warn(`Permission or Not Found error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                    continue; // Immediately try with the next model
+                }
+            }
+            
+            if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Quota exceeded') || error?.message?.includes('prepayment credits') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+                // If it's a prepayment depletion error, try falling back to next model (in case smaller models are free)
+                if (error?.message?.includes('prepayment credits') || error?.message?.includes('billing')) {
+                    if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                        modelIndex++;
+                        console.warn(`Billing error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                        continue; // Try next model immediately
+                    } else {
+                        throw new Error("Your Gemini API credits are depleted. Please update your API key or configure a Local LLM Provider in Settings.");
+                    }
+                }
+
+                const match = error?.message?.match(/Please retry in (\d+\.?\d*)s/);
+                const waitSeconds = match ? parseFloat(match[1]) : Math.pow(2, attempt) * 10;
+                console.warn(`Rate limit hit. Retrying in ${waitSeconds} seconds... (Attempt ${attempt + 1}/${maxRetries})`);
+                await delay(waitSeconds * 1000 + 1000); // Add 1 second buffer
+                attempt++;
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('Max retries exceeded for Gemini API.');
+};
 
 export const getAiName = async (text: string, instructions: string): Promise<string | null> => {
   if (!process.env.API_KEY) {
@@ -854,7 +1158,7 @@ export const getAiName = async (text: string, instructions: string): Promise<str
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: model,
       contents: prompt,
     });
@@ -918,7 +1222,7 @@ export const getMedicalStatementFilename = async (text: string): Promise<string 
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: model,
       contents: prompt,
       config: {
@@ -986,7 +1290,7 @@ export const getShortenedSuffix = async (suffixText: string): Promise<string> =>
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry({
             model: model,
             contents: prompt,
         });
@@ -1027,7 +1331,7 @@ export const getAnswerFromText = async (pagesText: { pageNum: number; text: stri
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: "gemini-3.5-flash",
       contents: prompt,
     });
@@ -1054,6 +1358,183 @@ export const getAnswerFromText = async (pagesText: { pageNum: number; text: stri
     throw new Error("An unknown error occurred while communicating with the AI.");
   }
 };
+
+
+
+========================================
+ FILE: services/googleSheetsService.ts
+========================================
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  type User,
+} from "firebase/auth";
+import firebaseConfig from "../firebase-applet-config.json";
+
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+// Provider setup
+const provider = new GoogleAuthProvider();
+provider.addScope("https://www.googleapis.com/auth/spreadsheets");
+provider.addScope("https://www.googleapis.com/auth/drive.file");
+provider.addScope("https://www.googleapis.com/auth/drive.readonly");
+
+let isSigningIn = false;
+let cachedAccessToken: string | null = null;
+
+// Initialize auth listener
+export const initAuth = (
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      if (cachedAccessToken) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else if (!isSigningIn) {
+        cachedAccessToken = null;
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
+};
+
+// Sign in with Google
+export const googleSignIn = async (): Promise<{
+  user: User;
+  accessToken: string;
+} | null> => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error("Failed to get access token from Firebase Auth");
+    }
+
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error("Sign in error:", error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
+};
+
+export const logout = async () => {
+  await auth.signOut();
+  cachedAccessToken = null;
+};
+
+// --- Google Drive and Sheets API wrappers ---
+
+export interface SpreadsheetInfo {
+  id: string;
+  name: string;
+}
+
+/**
+ * Lists the 20 most recently modified spreadsheets from the user's Google Drive.
+ */
+export async function listSpreadsheets(token: string): Promise<SpreadsheetInfo[]> {
+  const query = encodeURIComponent("mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=modifiedTime%20desc&pageSize=20&fields=files(id,name)`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Drive list failed: ${response.status} - ${errText}`);
+  }
+
+  const data = await response.json();
+  return (data.files || []) as SpreadsheetInfo[];
+}
+
+/**
+ * Creates a new Google Spreadsheet with a specified title and initializes it with headers.
+ */
+export async function createSpreadsheet(
+  token: string,
+  title: string,
+  headers: string[]
+): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+  // Create spreadsheet
+  const createUrl = "https://sheets.googleapis.com/v4/spreadsheets";
+  const createRes = await fetch(createUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      properties: {
+        title,
+      },
+    }),
+  });
+
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    throw new Error(`Create spreadsheet failed: ${createRes.status} - ${errText}`);
+  }
+
+  const sheetData = await createRes.json();
+  const spreadsheetId = sheetData.spreadsheetId;
+  const spreadsheetUrl = sheetData.spreadsheetUrl;
+
+  // Initialize spreadsheet with header row
+  if (headers && headers.length > 0) {
+    await appendSpreadsheetData(token, spreadsheetId, "Sheet1!A1", [headers]);
+  }
+
+  return { spreadsheetId, spreadsheetUrl };
+}
+
+/**
+ * Appends rows of data to a spreadsheet at the specified range.
+ */
+export async function appendSpreadsheetData(
+  token: string,
+  spreadsheetId: string,
+  range: string,
+  values: any[][]
+): Promise<void> {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      values,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Append sheets failed: ${response.status} - ${errText}`);
+  }
+}
 
 
 ========================================
@@ -1384,13 +1865,167 @@ export function convertToPOS49XLSX(data: JournalEntry[]): ArrayBuffer {
 
 
 ========================================
+ FILE: services/localLlmService.ts
+========================================
+export const getLLMConfig = () => {
+    try {
+        const provider = localStorage.getItem('llm_provider') || 'gemini';
+        let baseUrl = localStorage.getItem('llm_base_url') || 'http://localhost:11434/v1';
+        // if user entered trailing slash, remove it
+        if (baseUrl.endsWith('/')) {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+        const modelName = localStorage.getItem('llm_model') || 'llama3';
+        return { provider, baseUrl, modelName };
+    } catch {
+        return { provider: 'gemini', baseUrl: 'http://localhost:11434/v1', modelName: 'llama3' };
+    }
+};
+
+export const callLocalLLM = async (prompt: string, schema: any, modelName: string, baseUrl: string) => {
+    let systemMessage = "You are an expert AI extraction assistant. Follow instructions perfectly.";
+    
+    // Convert gemini schema to simplified JSON string representation for the prompt if needed
+    if (schema) {
+        systemMessage += `\nYou must return ONLY valid JSON matching the following schema. Do not output anything else (no markdown blocks, no commentary).\nSchema:\n${JSON.stringify(schema, null, 2)}`;
+    }
+
+    const payload = {
+        model: modelName,
+        messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: prompt }
+        ],
+        temperature: 0.1,
+    };
+
+    try {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Local LLM Error: ${res.status} ${res.statusText} - ${text}`);
+        }
+
+        const data = await res.json();
+        let content = data.choices?.[0]?.message?.content || "";
+        
+        // robust JSON cleanup
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+            content = jsonMatch[1];
+        } else {
+            // Just in case there is no markdown but conversational text around it, try to find first { and last }
+            const firstBrace = content.indexOf('{');
+            const lastBrace = content.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                content = content.substring(firstBrace, lastBrace + 1);
+            }
+        }
+        
+        return { text: content };
+    } catch (e: any) {
+        if (e.message.includes("Failed to fetch") || e.message.includes("Load failed")) {
+            throw new Error("Could not connect to Local LLM. Please make sure Ollama/LM Studio is running and CORS is enabled (OLLAMA_ORIGINS=\"*\").");
+        }
+        throw e;
+    }
+};
+
+
+========================================
  FILE: services/merchantGeminiService.ts
 ========================================
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { getLLMConfig, callLocalLLM } from "./localLlmService";
 import { ExtractedData } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let aiInstance: GoogleGenAI | null = null;
+const getAi = (): GoogleGenAI => {
+    if (!aiInstance) {
+        const apiKey = process.env.API_KEY || "DUMMY_KEY_FOR_BUILD";
+        aiInstance = new GoogleGenAI({ apiKey });
+    }
+    return aiInstance;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const modelsChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+
+const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
+    const config = typeof window !== 'undefined' ? getLLMConfig() : { provider: 'gemini', baseUrl: '', modelName: '' };
+    if (config.provider === 'local') {
+        return callLocalLLM(aiParams.contents, aiParams.config?.responseSchema, config.modelName, config.baseUrl);
+    }
+
+    let attempt = 0;
+    let modelIndex = 0;
+    while (attempt < maxRetries) {
+        const originalModel = aiParams.model;
+        let currentModel = originalModel;
+        
+        if (modelsChain.includes(originalModel)) {
+            currentModel = modelsChain[Math.min(modelIndex, modelsChain.length - 1)];
+        }
+        
+        const params = { ...aiParams, model: currentModel };
+        
+        try {
+            return await getAi().models.generateContent(params);
+        } catch (error: any) {
+            console.error(`Gemini call failed with model ${currentModel}:`, error);
+            
+            const isPermissionOrNotFound = error?.status === 403 || 
+                                          error?.code === 403 || 
+                                          error?.message?.includes('403') || 
+                                          error?.message?.includes('permission') ||
+                                          error?.message?.includes('PERMISSION_DENIED') ||
+                                          error?.status === 404 ||
+                                          error?.code === 404 ||
+                                          error?.message?.includes('404') ||
+                                          error?.message?.includes('not found') ||
+                                          error?.message?.includes('NOT_FOUND');
+            
+            if (isPermissionOrNotFound) {
+                if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                    modelIndex++;
+                    console.warn(`Permission or Not Found error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                    continue; // Immediately try with the next model
+                }
+            }
+            
+            if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Quota exceeded') || error?.message?.includes('prepayment credits') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+                // If it's a prepayment depletion error, try falling back to next model (in case smaller models are free)
+                if (error?.message?.includes('prepayment credits') || error?.message?.includes('billing')) {
+                    if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                        modelIndex++;
+                        console.warn(`Billing error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                        continue; // Try next model immediately
+                    } else {
+                        throw new Error("Your Gemini API credits are depleted. Please update your API key or configure a Local LLM Provider in Settings.");
+                    }
+                }
+
+                const match = error?.message?.match(/Please retry in (\d+\.?\d*)s/);
+                const waitSeconds = match ? parseFloat(match[1]) : Math.pow(2, attempt) * 10;
+                console.warn(`Rate limit hit. Retrying in ${waitSeconds} seconds... (Attempt ${attempt + 1}/${maxRetries})`);
+                await delay(waitSeconds * 1000 + 1000); // Add 1 second buffer
+                attempt++;
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('Max retries exceeded for Gemini API.');
+};
 
 const responseSchema = {
   type: Type.OBJECT,
@@ -1458,7 +2093,7 @@ export async function extractTransactionsFromText(text: string): Promise<Extract
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
@@ -1520,45 +2155,29 @@ export interface PageText {
 }
 
 export const extractTextFromPdfWithPageNumbers = async (file: File): Promise<PageText[]> => {
-  const fileReader = new FileReader();
-
-  return new Promise((resolve, reject) => {
-    fileReader.onload = async (event) => {
-      if (!event.target?.result) {
-        return reject(new Error("Failed to read file."));
-      }
-
-      try {
-        const typedarray = new Uint8Array((event.target.result as ArrayBuffer).slice(0));
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-        
-        // Parallelize page processing using Promise.all
-        const pagePromises = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-          pagePromises.push(pdf.getPage(i).then(async page => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const typedarray = new Uint8Array(arrayBuffer.slice(0));
+    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+    
+    // Parallelize page processing using Promise.all
+    const pagePromises = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+        pagePromises.push(pdf.getPage(i).then(async page => {
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map((item: any) => 'str' in item ? item.str : '').join(" ");
             return { pageNum: i, text: pageText };
-          }));
-        }
-        
-        const pagesText = await Promise.all(pagePromises);
-        resolve(pagesText);
-      } catch (error) {
-        if (error instanceof Error) {
-            reject(new Error(`PDF processing error: ${error.message}`));
-        } else {
-            reject(new Error("An unknown error occurred during PDF processing."));
-        }
-      }
-    };
-
-    fileReader.onerror = () => {
-      reject(new Error("Error reading file."));
-    };
+        }));
+    }
     
-    fileReader.readAsArrayBuffer(file);
-  });
+    return await Promise.all(pagePromises);
+  } catch (error) {
+    if (error instanceof Error) {
+        throw new Error(`PDF processing error: ${error.message}`);
+    } else {
+        throw new Error("An unknown error occurred during PDF processing.");
+    }
+  }
 };
 
 export interface KeywordSearchResult {
@@ -1566,60 +2185,45 @@ export interface KeywordSearchResult {
 }
 
 export const searchKeywordsInPdf = async (file: File, keywords: string[]): Promise<KeywordSearchResult> => {
-  const fileReader = new FileReader();
-
-  return new Promise((resolve, reject) => {
-    fileReader.onload = async (event) => {
-      if (!event.target?.result) {
-        return reject(new Error("Failed to read file."));
-      }
-
-      try {
-        const typedarray = new Uint8Array((event.target.result as ArrayBuffer).slice(0));
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-        
-        const results: KeywordSearchResult = {};
-        keywords.forEach(kw => results[kw] = []);
-
-        const lowerCaseKeywords = keywords.map(k => k.toLowerCase());
-
-        // Process pages in parallel
-        const pagePromises = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-            pagePromises.push(pdf.getPage(i).then(async page => {
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map((item: any) => 'str' in item ? item.str : '').join(" ");
-                const pageTextLower = pageText.toLowerCase();
-                return { pageNum: i, textLower: pageTextLower };
-            }));
-        }
-
-        const pages = await Promise.all(pagePromises);
-
-        pages.forEach(({ pageNum, textLower }) => {
-            lowerCaseKeywords.forEach((keyword, index) => {
-                if (textLower.includes(keyword)) {
-                    results[keywords[index]].push(pageNum);
-                }
-            });
-        });
-
-        resolve(results);
-      } catch (error) {
-        if (error instanceof Error) {
-            reject(new Error(`PDF processing error: ${error.message}`));
-        } else {
-            reject(new Error("An unknown error occurred during PDF processing."));
-        }
-      }
-    };
-
-    fileReader.onerror = () => {
-      reject(new Error("Error reading file."));
-    };
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const typedarray = new Uint8Array(arrayBuffer.slice(0));
+    const pdf = await pdfjsLib.getDocument(typedarray).promise;
     
-    fileReader.readAsArrayBuffer(file);
-  });
+    const results: KeywordSearchResult = {};
+    keywords.forEach(kw => results[kw] = []);
+
+    const lowerCaseKeywords = keywords.map(k => k.toLowerCase());
+
+    // Process pages in parallel
+    const pagePromises = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+        pagePromises.push(pdf.getPage(i).then(async page => {
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => 'str' in item ? item.str : '').join(" ");
+            const pageTextLower = pageText.toLowerCase();
+            return { pageNum: i, textLower: pageTextLower };
+        }));
+    }
+
+    const pages = await Promise.all(pagePromises);
+
+    pages.forEach(({ pageNum, textLower }) => {
+        lowerCaseKeywords.forEach((keyword, index) => {
+            if (textLower.includes(keyword)) {
+                results[keywords[index]].push(pageNum);
+            }
+        });
+    });
+
+    return results;
+  } catch (error) {
+    if (error instanceof Error) {
+        throw new Error(`PDF processing error: ${error.message}`);
+    } else {
+        throw new Error("An unknown error occurred during PDF processing.");
+    }
+  }
 };
 
 
@@ -1823,11 +2427,14 @@ export interface ProcessingResult {
   blob: Blob;
   matched: boolean;
   matchedCsvRows: number;
+  matchedEmailsCount?: number;
+  matchedEmailNames?: string[];
 }
 
 interface BatchData {
   name: string;
   descId: string;
+  unitId: string;
   pages: number[];
   fullText: string;
 }
@@ -2078,10 +2685,195 @@ async function appendCsvPages(outputPdf: PDFDocument, matchedRows: any[], batchN
   });
 }
 
+function extractAmounts(text: string): number[] {
+  const matches = text.match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,3})?\b/g);
+  if (!matches) return [];
+  
+  const amounts: number[] = [];
+  for (const m of matches) {
+    const val = parseFloat(m.replace(/,/g, ''));
+    if (isNaN(val)) continue;
+    
+    // Filter out years
+    if (val >= 2020 && val <= 2030) continue; 
+    
+    // If it's a whole number, it needs to be reasonably large but not huge (like an account number)
+    if (!m.includes('.')) {
+      if (val < 50 || val > 50000) continue; 
+    }
+    
+    amounts.push(val);
+  }
+  return amounts;
+}
+
+function isEmailPdfMatch(
+  batchNum: string,
+  descId: string,
+  unitId: string,
+  batchName: string,
+  fullText: string,
+  emailText: string,
+  emailFileName: string
+): boolean {
+  
+  const emailTextLower = emailText.toLowerCase();
+  const emailFileNameLower = emailFileName.toLowerCase();
+  const fullTextLower = fullText.toLowerCase();
+
+  // 0. Strong Amount Match Filter
+  const journalAmounts = extractAmounts(fullTextLower);
+  const emailAmounts = extractAmounts(emailTextLower);
+  
+  let amountMatch = false;
+  if (journalAmounts.length > 0 && emailAmounts.length > 0) {
+    for (const ja of journalAmounts) {
+       for (const ea of emailAmounts) {
+         if (Math.abs(ja - ea) < 1.0) {
+           amountMatch = true;
+           break;
+         }
+       }
+       if (amountMatch) break;
+    }
+  } else {
+    // If no valid amounts found in either, allow it to proceed to text matching
+    amountMatch = true;
+  }
+  
+  if (!amountMatch) return false;
+
+
+  // Use unitId in matching
+  if (unitId && unitId.length > 0) {
+      const unitIdLower = unitId.toLowerCase();
+      // If unitId is present in journal, it should ideally be in the email
+      if (!emailTextLower.includes(unitIdLower) && !emailFileNameLower.includes(unitIdLower)) {
+          return false;
+      }
+  }
+
+  // 1. Direct match on Description ID (e.g. CRNOTE-WR-55018, WT-44910, KIBYR-4765)
+  if (descId) {
+    const descIdLower = descId.toLowerCase().trim();
+    if (descIdLower.length > 3) {
+      if (emailTextLower.includes(descIdLower) || emailFileNameLower.includes(descIdLower)) {
+        return true;
+      }
+      
+      // Match normalized description (e.g. ignoring dashes or spaces)
+      const descIdNorm = descIdLower.replace(/[^a-z0-9]/g, '');
+      const emailTextNorm = emailTextLower.replace(/[^a-z0-9]/g, '');
+      const emailFileNameNorm = emailFileNameLower.replace(/[^a-z0-9]/g, '');
+      if (descIdNorm.length >= 4 && (emailTextNorm.includes(descIdNorm) || emailFileNameNorm.includes(descIdNorm))) {
+        return true;
+      }
+    }
+
+    // Try extracting alphanumeric parts (e.g. WR-55018 -> WR, 55018)
+    const refMatch = descId.match(/(?:KIB|WR|WT|CRNOTE-WR)[A-Z]*\s*[- ]?\s*(\d{4,5})/i);
+    if (refMatch) {
+      const fullRef = refMatch[0].toLowerCase();
+      const numPart = refMatch[1];
+      if (emailTextLower.includes(fullRef) || emailFileNameLower.includes(fullRef)) {
+        return true;
+      }
+      if (numPart && numPart.length >= 4 && (emailTextLower.includes(numPart) || emailFileNameLower.includes(numPart))) {
+        // Verify if clinic name is also present in the email to avoid false positives on random numbers
+        const nameParts = batchName.split('-');
+        const clinicName = nameParts[0].toLowerCase().trim();
+        if (clinicName.length > 3 && (emailTextLower.includes(clinicName) || emailFileNameLower.includes(clinicName))) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Match on Batch Number
+  if (batchNum && batchNum.length > 3) {
+    const batchNumLower = batchNum.toLowerCase();
+    if (emailTextLower.includes(batchNumLower) || emailFileNameLower.includes(batchNumLower)) {
+      return true;
+    }
+  }
+
+  // 3. Match on clinic/merchant name and voucher numbers from full text
+  // Avoid using generic terms like Cus_Rec as the clinic name
+  let clinicName = "";
+  if (descId) {
+    clinicName = descId.split('-')[0].toLowerCase().trim();
+  } else {
+    const nameParts = batchName.split('-');
+    clinicName = nameParts.length > 1 && nameParts[0].toLowerCase().includes('cus_rec') ? nameParts[1].toLowerCase().trim() : nameParts[0].toLowerCase().trim();
+  }
+
+  const genericNames = ['cus_rec', 'pos', 'knet', 'cash', 'bank', 'transfer'];
+  if (clinicName.length > 3 && !genericNames.includes(clinicName)) {
+    if (emailTextLower.includes(clinicName) || emailFileNameLower.includes(clinicName)) {
+      
+      // If clinic name matches, check if we find any specific reference number from the journal page in the email
+      let matchedOnNumber = false;
+      if (descId) {
+        const numbers = descId.match(/\d+/g);
+        if (numbers) {
+          for (const num of numbers) {
+            // Ignore years to prevent false positive matches across all emails
+            if (num.length >= 4 && num !== "2023" && num !== "2024" && num !== "2025" && num !== "2026" && num !== "2027") {
+              if (emailTextLower.includes(num) || emailFileNameLower.includes(num)) {
+                matchedOnNumber = true;
+                return true;
+              }
+            }
+          }
+        }
+      }
+      
+      // If no specific reference number matched, we can still match if the clinic name is a strong match
+      // and we don't have conflicting information
+      if (!matchedOnNumber) {
+        // Also check if any account number or keyword from the full text is found in the email
+        const accountMatches = fullTextLower.match(/\b\d{10,12}\b/g) || fullTextLower.match(/(?:KIB[A-Z0-9-]*)/gi);
+        if (accountMatches) {
+          for (const acc of accountMatches) {
+            const cleanAcc = acc.toLowerCase();
+            if (cleanAcc.length >= 4 && emailTextLower.includes(cleanAcc)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Phrase matching (e.g. for "Mira Packaging" from "Mira Packaging Factory-Rent: Rent July 2026 Billing")
+  if (descId) {
+    const descIdClean = descId.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+    const stopwords = new Set(['for', 'the', 'and', 'with', 'from', 'month', 'year', 'rent', 'billing', 'invoice']);
+    const descWords = descIdClean.split(/\s+/).filter(w => w.length > 2 && !stopwords.has(w));
+    
+    // Check for 2+ consecutive words matching
+    for (let i = 0; i < descWords.length - 1; i++) {
+      const phrase = `${descWords[i]} ${descWords[i+1]}`;
+      // Exclude overly generic phrases to avoid false positives
+      const genericWords = "january|february|march|april|may|june|july|august|september|october|november|december|rent|billing|invoice|payment|receipt|deposit|slip|year|month|company|co|ltd|wll|spc|est|trading|factory|\\d+";
+      const isDateOrGeneric = new RegExp('^(' + genericWords + ')\\s+(' + genericWords + ')$', 'i').test(phrase);
+      
+      if (!isDateOrGeneric) {
+        if (emailFileNameLower.includes(phrase) || emailTextLower.includes(phrase)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function processFiles(
   mainPdfFile: File,
   bankStatements: File[],
   csvFiles: File[],
+  emailFiles: File[] = [],
   onProgress: (msg: string) => void
 ): Promise<ProcessingResult[]> {
   onProgress("Loading PDF toolset...");
@@ -2151,6 +2943,7 @@ export async function processFiles(
       batches[currentBatchNum] = {
         name: pageName,
         descId: currentDescId,
+        unitId: "",
         pages: [],
         fullText: ""
       };
@@ -2161,8 +2954,39 @@ export async function processFiles(
       batches[currentBatchNum].descId = currentDescId;
     }
 
+    // Extract unitId
+    const unitMatch = text.match(/(?:unit\s*[#]?\s*([a-z0-9-]+))/i);
+    if (unitMatch && unitMatch[1]) {
+        batches[currentBatchNum].unitId = unitMatch[1];
+    }
+
     batches[currentBatchNum].pages.push(i - 1);
     batches[currentBatchNum].fullText += "\n" + text;
+  }
+
+  // Extract text from Email PDFs
+  const emailTexts: { file: File; text: string }[] = [];
+  if (emailFiles.length > 0) {
+    onProgress("Analyzing Email PDFs...");
+    for (let eIdx = 0; eIdx < emailFiles.length; eIdx++) {
+      const emailFile = emailFiles[eIdx];
+      onProgress(`Reading Email PDF ${eIdx + 1} of ${emailFiles.length}: ${emailFile.name}`);
+      try {
+        const emailBuffer = await emailFile.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: emailBuffer.slice(0) }).promise;
+        let fullEmailText = "";
+        for (let p = 1; p <= doc.numPages; p++) {
+          const page = await doc.getPage(p);
+          const textContent = await page.getTextContent();
+          const text = textContent.items.map((item: any) => (item as any).str).join(' ');
+          fullEmailText += "\n" + text;
+        }
+        emailTexts.push({ file: emailFile, text: fullEmailText });
+      } catch (err) {
+        console.error(`Failed to extract text from email PDF ${emailFile.name}:`, err);
+        emailTexts.push({ file: emailFile, text: "" });
+      }
+    }
   }
 
   // Aggregate CSV Data
@@ -2236,6 +3060,14 @@ export async function processFiles(
       });
     }
 
+    // Find matching Email PDFs
+    const matchedEmailFiles: File[] = [];
+    for (const item of emailTexts) {
+      if (isEmailPdfMatch(batchNum, data.descId, data.unitId, data.name, data.fullText, item.text, item.file.name)) {
+        matchedEmailFiles.push(item.file);
+      }
+    }
+
     // Copy original pages
     const copiedMainPages = await outputPdf.copyPages(srcPdf, data.pages);
     copiedMainPages.forEach(p => outputPdf.addPage(p));
@@ -2249,20 +3081,51 @@ export async function processFiles(
       matched = true;
     }
 
+    // Append matched Email PDFs
+    let matchedEmailsCount = 0;
+    const matchedEmailNames: string[] = [];
+    for (const emailFile of matchedEmailFiles) {
+      try {
+        const emailBuffer = await emailFile.arrayBuffer();
+        const emailPdf = await PDFDocument.load(emailBuffer);
+        const copiedEmailPages = await outputPdf.copyPages(emailPdf, emailPdf.getPageIndices());
+        copiedEmailPages.forEach(p => outputPdf.addPage(p));
+        matchedEmailsCount++;
+        matchedEmailNames.push(emailFile.name);
+      } catch (err) {
+        console.error(`Failed to append email PDF ${emailFile.name}:`, err);
+      }
+    }
+
     // append matched CSV transaction data pages to the PDF
     if (matchedRows.length > 0) {
       await appendCsvPages(outputPdf, matchedRows, data.name);
     }
 
     const pdfBytes = await outputPdf.save();
-    let suffix = matched && matchedRows.length > 0 ? "_FullMatched" : matched ? "_StatementMatch" : matchedRows.length > 0 ? "_CSVMatch" : "";
+    
+    // Calculate final descriptive filename suffix
+    let suffixParts: string[] = [];
+    if (matched) suffixParts.push("StatementMatch");
+    if (matchedRows.length > 0) suffixParts.push("CSVMatch");
+    if (matchedEmailsCount > 0) suffixParts.push("EmailMatch");
+    
+    let suffix = "";
+    if (suffixParts.length === 3) {
+      suffix = "_FullMatched";
+    } else if (suffixParts.length > 0) {
+      suffix = "_" + suffixParts.join("_");
+    }
+
     const fileName = `${data.name}${suffix}.pdf`.replace(/[\\/:*?"<>|]/g, "_").trim();
     
     results.push({
       fileName,
       blob: new Blob([pdfBytes], { type: 'application/pdf' }),
       matched,
-      matchedCsvRows: matchedRows.length
+      matchedCsvRows: matchedRows.length,
+      matchedEmailsCount,
+      matchedEmailNames
     });
   }
 
@@ -2275,9 +3138,88 @@ export async function processFiles(
 ========================================
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { getLLMConfig, callLocalLLM } from "./localLlmService";
 import { ExtractedData } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let aiInstance: GoogleGenAI | null = null;
+const getAi = (): GoogleGenAI => {
+    if (!aiInstance) {
+        const apiKey = process.env.API_KEY || "DUMMY_KEY_FOR_BUILD";
+        aiInstance = new GoogleGenAI({ apiKey });
+    }
+    return aiInstance;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const modelsChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+
+const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
+    const config = typeof window !== 'undefined' ? getLLMConfig() : { provider: 'gemini', baseUrl: '', modelName: '' };
+    if (config.provider === 'local') {
+        return callLocalLLM(aiParams.contents, aiParams.config?.responseSchema, config.modelName, config.baseUrl);
+    }
+
+    let attempt = 0;
+    let modelIndex = 0;
+    while (attempt < maxRetries) {
+        const originalModel = aiParams.model;
+        let currentModel = originalModel;
+        
+        if (modelsChain.includes(originalModel)) {
+            currentModel = modelsChain[Math.min(modelIndex, modelsChain.length - 1)];
+        }
+        
+        const params = { ...aiParams, model: currentModel };
+        
+        try {
+            return await getAi().models.generateContent(params);
+        } catch (error: any) {
+            console.error(`Gemini call failed with model ${currentModel}:`, error);
+            
+            const isPermissionOrNotFound = error?.status === 403 || 
+                                          error?.code === 403 || 
+                                          error?.message?.includes('403') || 
+                                          error?.message?.includes('permission') ||
+                                          error?.message?.includes('PERMISSION_DENIED') ||
+                                          error?.status === 404 ||
+                                          error?.code === 404 ||
+                                          error?.message?.includes('404') ||
+                                          error?.message?.includes('not found') ||
+                                          error?.message?.includes('NOT_FOUND');
+            
+            if (isPermissionOrNotFound) {
+                if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                    modelIndex++;
+                    console.warn(`Permission or Not Found error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                    continue; // Immediately try with the next model
+                }
+            }
+            
+            if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Quota exceeded') || error?.message?.includes('prepayment credits') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+                // If it's a prepayment depletion error, try falling back to next model (in case smaller models are free)
+                if (error?.message?.includes('prepayment credits') || error?.message?.includes('billing')) {
+                    if (modelsChain.includes(originalModel) && modelIndex < modelsChain.length - 1) {
+                        modelIndex++;
+                        console.warn(`Billing error on model ${currentModel}. Switching to next fallback model: ${modelsChain[modelIndex]}`);
+                        continue; // Try next model immediately
+                    } else {
+                        throw new Error("Your Gemini API credits are depleted. Please update your API key or configure a Local LLM Provider in Settings.");
+                    }
+                }
+
+                const match = error?.message?.match(/Please retry in (\d+\.?\d*)s/);
+                const waitSeconds = match ? parseFloat(match[1]) : Math.pow(2, attempt) * 10;
+                console.warn(`Rate limit hit. Retrying in ${waitSeconds} seconds... (Attempt ${attempt + 1}/${maxRetries})`);
+                await delay(waitSeconds * 1000 + 1000); // Add 1 second buffer
+                attempt++;
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('Max retries exceeded for Gemini API.');
+};
 
 const responseSchema = {
   type: Type.OBJECT,
@@ -2344,7 +3286,7 @@ export async function extractTransactionsFromText(text: string): Promise<Extract
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
@@ -2748,6 +3690,353 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ onPreview, onDownload, on
 export default ActionButtons;
 
 ========================================
+ FILE: components/BahrainCustPaymentAutomation.tsx
+========================================
+import React, { useState } from 'react';
+import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { processBahrainFiles, ProcessingResult } from '../services/bahrainCustPaymentService';
+import * as XLSX from 'xlsx';
+
+export default function BahrainCustPaymentAutomation() {
+  const [emailPdfs, setEmailPdfs] = useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState('');
+  const [results, setResults] = useState<ProcessingResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEmailPdfsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setEmailPdfs(Array.from(e.target.files));
+    }
+  };
+
+  const handleProcess = async () => {
+    if (emailPdfs.length === 0) {
+      setError("Please upload at least one email PDF.");
+      return;
+    }
+    
+    setIsProcessing(true);
+    setError(null);
+    setResults([]);
+    
+    try {
+      const output = await processBahrainFiles(emailPdfs, setStatus);
+      setResults(output);
+      
+      if (output.length > 0) {
+        generateExcel(output);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An error occurred during processing.");
+    } finally {
+      setIsProcessing(false);
+      setStatus('');
+    }
+  };
+
+  const generateExcel = (resultsData: ProcessingResult[]) => {
+    try {
+      const exportData: any[] = [];
+      let jnum = 1;
+      
+      for (const res of resultsData) {
+        if (!res.success || !res.extractedData) continue;
+        
+        let lnum = 1;
+        for (const row of res.extractedData.rows) {
+          exportData.push({
+            "Column1": jnum.toString(),
+            "Column2": "Cus_Rec",
+            "Column3": lnum.toString(),
+            "Column4": row.pdate,
+            "Column5": "1",
+            "Column6": row.ccode,
+            "Column7": `${row.cname}-${row.force}: ${row.desc}`,
+            "Column8": "",
+            "Column9": row.amt,
+            "Column10": "BHD",
+            "Column11": 100,
+            "Column12": 6,
+            "Column13": "AUBBHD001",
+            "Column14": "",
+            "Column15": "",
+            "Column16": row.pdate,
+            "Column17": row.pdate,
+            "Column18": "",
+            "Column19": row.unit === "BHW1-C-10" ? "AdvRent" : (row.force === "EWA" ? "EWA" : "Cust Post"),
+            "Column20": "",
+            "Column21": "",
+            "Column22": lnum.toString(),
+            "Column23": "",
+            "Column24": "06",
+            "Column25": "113",
+            "Column26": "107",
+            "Column27": "BHW1",
+            "Column28": row.unit
+          });
+          lnum++;
+        }
+        jnum++;
+      }
+      
+      const ws = XLSX.utils.json_to_sheet(exportData, { skipHeader: true });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Export");
+      
+      XLSX.writeFile(wb, "Bahrain_CustPayment_Export.xlsx");
+    } catch (err) {
+      console.error("Excel generation error:", err);
+      setError("Failed to generate Excel file.");
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-sky-400" />
+            Bahrain CustPayment
+          </h2>
+          <p className="text-slate-400 mt-1">Upload email PDFs to extract payment info and generate Excel entry</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-dark-200 p-6 rounded-xl border border-dark-300">
+          <label className="block text-sm font-medium text-slate-300 mb-2">Upload Email PDFs</label>
+          <div className="relative group">
+            <div className="absolute inset-0 bg-sky-500/10 border-2 border-dashed border-sky-500/30 rounded-lg group-hover:bg-sky-500/20 transition-colors" />
+            <input
+              type="file"
+              multiple
+              accept="application/pdf"
+              onChange={handleEmailPdfsChange}
+              className="relative w-full h-32 opacity-0 cursor-pointer z-10"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <Upload className="w-8 h-8 text-sky-400 mb-2" />
+              <span className="text-sm font-medium text-slate-300">
+                {emailPdfs.length > 0 ? `${emailPdfs.length} files selected` : "Select PDFs"}
+              </span>
+            </div>
+          </div>
+          
+          <button
+            onClick={handleProcess}
+            disabled={isProcessing || emailPdfs.length === 0}
+            className="mt-6 w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex justify-center items-center gap-2"
+          >
+            {isProcessing ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                {status || "Processing..."}
+              </>
+            ) : (
+              "Process & Generate Excel"
+            )}
+          </button>
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-dark-200 p-6 rounded-xl border border-dark-300">
+          <h3 className="text-lg font-medium text-slate-200 mb-4">Results</h3>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {results.length === 0 && !isProcessing && (
+              <p className="text-slate-500 text-sm italic">No results yet. Upload and process files.</p>
+            )}
+            {results.map((res, i) => (
+              <div key={i} className="p-3 bg-dark-300 rounded border border-dark-400 flex items-center justify-between">
+                <span className="text-sm text-slate-300 truncate pr-4">{res.fileName}</span>
+                {res.success ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0" title={res.error} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
+ FILE: components/Chatbot.tsx
+========================================
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Trash, User, Bot, AlertCircle, X, MessageSquare } from 'lucide-react';
+import { getLLMConfig, callLocalLLM } from '../services/localLlmService';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'model' | 'error';
+  text: string;
+}
+
+interface ChatbotProps {
+  currentMode: string;
+}
+
+export default function Chatbot({ currentMode }: ChatbotProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [chatId, setChatId] = useState(() => Math.random().toString(36).substring(7));
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const systemInstruction = `You are a professional financial AI assistant for Mazaya Finance. Provide concise, clear, and accurate answers. The user is currently using the "${currentMode}" module in the application. You can help them understand the tools, analyze files, or guide them.`;
+
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', text: input };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const config = getLLMConfig();
+      if (config.provider === 'local') {
+          // Just pass the current chat as history in the prompt roughly
+          const history = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
+          const prompt = `${systemInstruction}\n\nChat History:\n${history}\nUser: ${userMsg.text}\nAssistant:`;
+          const result = await callLocalLLM(prompt, null, config.modelName, config.baseUrl);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: result.text }]);
+      } else {
+        const response = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatId,
+            message: userMsg.text,
+            model: 'gemini-3.5-flash',
+            systemInstruction
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+        
+        const data = await response.json();
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: data.text }]);
+      }
+    } catch (error: any) {
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'error', text: 'Error: ' + error.message }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setMessages([]);
+    setChatId(Math.random().toString(36).substring(7));
+    try {
+      await fetch('/api/gemini/chat/' + chatId, { method: 'DELETE' });
+    } catch(e) {}
+  };
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 p-4 bg-sky-600 text-white rounded-full shadow-lg hover:bg-sky-500 transition-transform transform hover:scale-105 z-50 animate-fade-in"
+        title="Open AI Assistant"
+      >
+        <MessageSquare className="w-7 h-7" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 w-96 flex flex-col h-[600px] max-h-[80vh] bg-dark-200 border border-dark-300 rounded-lg shadow-2xl overflow-hidden animate-fade-in z-50">
+      <div className="p-4 bg-dark-300 border-b flex justify-between items-center" style={{ borderColor: '#374151' }}>
+        <div>
+           <h2 className="text-lg font-semibold text-slate-200 flex items-center">
+            <Bot className="w-5 h-5 mr-2 text-sky-400" />
+            AI Assistant
+           </h2>
+           <p className="text-xs text-slate-400">Powered by Gemini Flash Lite</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleClear} className="text-slate-400 hover:text-rose-400 p-2 rounded transition-colors" title="Clear Chat">
+            <Trash className="w-4 h-4" />
+          </button>
+          <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-200 p-2 rounded transition-colors" title="Close">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-dark-100/50">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center px-4">
+             <Bot className="w-12 h-12 mb-3 text-slate-600" />
+             <p className="font-medium text-slate-300 mb-1">How can I help you today?</p>
+             <p className="text-sm">I can answer questions about the {currentMode} tool or analyze standard files.</p>
+          </div>
+        ) : (
+          messages.map(msg => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-lg p-3 ${
+                msg.role === 'user' ? 'bg-sky-600 text-white' : 
+                msg.role === 'error' ? 'bg-rose-900/50 text-rose-200 border border-rose-800' :
+                'bg-dark-300 text-slate-200 border border-dark-400'
+              }`}>
+                {msg.role === 'model' && <Bot className="w-4 h-4 mb-1 text-sky-400 inline-block mr-2" />}
+                {msg.role === 'user' && <User className="w-4 h-4 mb-1 text-sky-200 inline-block mr-2" />}
+                {msg.role === 'error' && <AlertCircle className="w-4 h-4 mb-1 text-rose-400 inline-block mr-2" />}
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.text}</p>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-4 bg-dark-300 border-t" style={{ borderColor: '#374151' }}>
+        <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+          <input
+            type="text"
+            className="flex-1 bg-dark-100 border border-slate-600 text-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500 text-sm"
+            placeholder="Ask me anything..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            disabled={isLoading}
+          />
+          <button 
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="bg-sky-600 hover:bg-sky-500 text-white rounded-lg px-4 py-2 disabled:opacity-50 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+========================================
  FILE: components/Convert001To49Automation.tsx
 ========================================
 import React, { useState, useCallback, useRef, useMemo } from 'react';
@@ -2838,162 +4127,156 @@ const Convert001To49Automation: React.FC = () => {
     };
 
     const processExcelFile = async (file: File) => {
-        return new Promise<any[]>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const rows = XLSX.utils.sheet_to_json(sheet) as any[];
-                    
-                    const getVal = (row: any, key: string) => {
-                        const normalizedKey = key.trim().toLowerCase();
-                        const foundKey = Object.keys(row).find(k => k.trim().toLowerCase() === normalizedKey);
-                        return foundKey ? row[foundKey] : undefined;
-                    };
-                    
-                    const convertedEntries = [];
-                    let journalNumberCounter = 0;
-                    let lastAccountNo = '';
-                    let lineNumCounter = 0;
-
-                    for (const row of rows) {
-                        // Check for Offset Account starting with 50- (any Clover 50 account)
-                        const offsetAccountInfo = getVal(row, 'Offset Account') ?? getVal(row, 'Offset account');
-                        const offsetAccount = offsetAccountInfo?.toString().trim();
-                        if (!offsetAccount || !offsetAccount.startsWith('50-')) continue;
-
-                        const accountNo = getVal(row, 'Account No')?.toString().trim() || '';
-
-                        // Group by original Account No
-                        if (accountNo !== lastAccountNo) {
-                            journalNumberCounter++;
-                            lastAccountNo = accountNo;
-                            lineNumCounter = 1;
-                        } else {
-                            lineNumCounter++;
-                        }
-
-                        // Determine new Debit and Credit
-                        const oldDebitInfo = getVal(row, 'Debit Amount');
-                        const oldCreditInfo = getVal(row, 'Credit Amount');
-                        
-                        let newDebit: any = '';
-                        let newCredit: any = '';
-
-                        const oldDebitStr = oldDebitInfo ? oldDebitInfo.toString().trim() : '';
-                        const oldCreditStr = oldCreditInfo ? oldCreditInfo.toString().trim() : '';
-
-                        if (oldDebitStr === '' && oldCreditStr !== '') {
-                            newDebit = oldCreditInfo;
-                        } else if (oldDebitStr !== '' && oldCreditStr === '') {
-                            newCredit = oldDebitInfo;
-                        } else {
-                            // If both or neither, just swap anyway or handle appropriately
-                            newDebit = oldCreditInfo || '';
-                            newCredit = oldDebitInfo || '';
-                        }
-
-                        let newAccountNo = accountNo;
-                        let newOffsetAccount = '50-000001';
-                        let activities = getVal(row, 'Activities') || '';
-                        let country = getVal(row, 'Country') || '';
-                        let departments = getVal(row, 'Departments') || '';
-                        let projectId = getVal(row, 'Project_ID') || getVal(row, 'Project ID') || '';
-                        let propertyId = getVal(row, 'Property_ID') || getVal(row, 'Property ID') || '';
-
-                        let bankInfo = WARBA_BANK_INFO.find(info => info.accountNo === accountNo || info.oldAccountNo === accountNo) || 
-                                       CLOVER_BANK_INFO.find(info => info.accountNo === accountNo || info.oldAccountNo === accountNo);
-                        
-                        if (bankInfo) {
-                            activities = bankInfo.activities;
-                            country = bankInfo.country;
-                            departments = bankInfo.departments;
-                            projectId = bankInfo.projectId;
-                            propertyId = bankInfo.propertyId;
-
-                            // For Clover, we used BANK_ACCOUNT_MAPPING, but since Warba already has correct new account as `accountNo` (e.g. WTAA-61012):
-                            if (BANK_ACCOUNT_MAPPING[bankInfo.accountName]) {
-                                newAccountNo = BANK_ACCOUNT_MAPPING[bankInfo.accountName];
-                            } else {
-                                // Default to the mapped account No (e.g. from Warba)
-                                newAccountNo = bankInfo.accountNo || newAccountNo;
-                            }
-                            
-                            if (WARBA_VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName]) {
-                                newOffsetAccount = WARBA_VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName];
-                            } else if (VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName]) {
-                                newOffsetAccount = VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName];
-                            }
-                        }
-
-                        const formatDate = (val: any) => {
-                            if (!val) return '';
-                            if (val instanceof Date) {
-                                const day = String(val.getDate()).padStart(2, '0');
-                                const month = String(val.getMonth() + 1).padStart(2, '0');
-                                const year = val.getFullYear();
-                                return `${day}-${month}-${year}`;
-                            }
-                            if (typeof val === 'number') {
-                                try {
-                                    const date = XLSX.SSF.parse_date_code(val);
-                                    const day = String(date.d).padStart(2, '0');
-                                    const month = String(date.m).padStart(2, '0');
-                                    const year = date.y;
-                                    return `${day}-${month}-${year}`;
-                                } catch (e) {
-                                    return val.toString();
-                                }
-                            }
-                            return val.toString();
-                        };
-
-                        const newEntry = {
-                            "Journal Number": journalNumberCounter,
-                            "Journal Name": "GenJournal",
-                            "Line Num": lineNumCounter,
-                            "Posting Date": formatDate(getVal(row, 'Posting Date')),
-                            "Account Type - Ledger - 0/ Customer - 1 /Vendor - 2/ Fixed assets - 5/ Bank - 6": 1, // 1 for Customer
-                            "Account No": '49-000001',
-                            "Description": (() => {
-                                const desc = (getVal(row, 'Description') || '').toString();
-                                return desc.split('/')[0].trim();
-                            })(),
-                            "Debit Amount": newDebit,
-                            "Credit Amount": newCredit,
-                            "Currency Code": getVal(row, 'Currency Code') || 'KWD',
-                            "Exchange Rate": getVal(row, 'Exchange Rate') || 100,
-                            "Offset account Type - Ledger - 0/ Customer - 1 /Vendor - 2/ Fixed assets - 5/ Bank - 6": '', // Empty to match output
-                            "Offset account": 0, // Integer 0 to match output
-                            "Invoice No": '2101432',
-                            "Document No": getVal(row, 'Invoice No') || getVal(row, 'Invoice no') || '',
-                            "Document Date": '', // Empty to match output
-                            "Due Date": formatDate(getVal(row, 'Posting Date')) || formatDate(getVal(row, 'Due Date')),
-                            "Asset trans type - Acq - 1 / Depre - 3": getVal(row, 'Asset Trans Type') || getVal(row, 'Asset trans type') || '',
-                            "Posting Profile": getVal(row, 'Posting Profile') || '',
-                            "Payment Mode": getVal(row, 'Payment Mode') || '',
-                            "Payment Reference": getVal(row, 'Payment Reference') || '',
-                            "Number of Voucher": lineNumCounter,
-                            "Activities": activities,
-                            "Country": country,
-                            "Departments": departments,
-                            "Project_ID": projectId,
-                            "Property_ID": propertyId
-                        };
-
-                        convertedEntries.push(newEntry);
-                    }
-                    resolve(convertedEntries);
-                } catch (err) {
-                    reject(err);
-                }
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+            
+            const getVal = (row: any, key: string) => {
+                const normalizedKey = key.trim().toLowerCase();
+                const foundKey = Object.keys(row).find(k => k.trim().toLowerCase() === normalizedKey);
+                return foundKey ? row[foundKey] : undefined;
             };
-            reader.onerror = (error) => reject(error);
-            reader.readAsArrayBuffer(file);
-        });
+            
+            const convertedEntries = [];
+            let journalNumberCounter = 0;
+            let lastAccountNo = '';
+            let lineNumCounter = 0;
+
+            for (const row of rows) {
+                // Check for Offset Account starting with 50- (any Clover 50 account)
+                const offsetAccountInfo = getVal(row, 'Offset Account') ?? getVal(row, 'Offset account');
+                const offsetAccount = offsetAccountInfo?.toString().trim();
+                if (!offsetAccount || !offsetAccount.startsWith('50-')) continue;
+
+                const accountNo = getVal(row, 'Account No')?.toString().trim() || '';
+
+                // Group by original Account No
+                if (accountNo !== lastAccountNo) {
+                    journalNumberCounter++;
+                    lastAccountNo = accountNo;
+                    lineNumCounter = 1;
+                } else {
+                    lineNumCounter++;
+                }
+
+                // Determine new Debit and Credit
+                const oldDebitInfo = getVal(row, 'Debit Amount');
+                const oldCreditInfo = getVal(row, 'Credit Amount');
+                
+                let newDebit: any = '';
+                let newCredit: any = '';
+
+                const oldDebitStr = oldDebitInfo ? oldDebitInfo.toString().trim() : '';
+                const oldCreditStr = oldCreditInfo ? oldCreditInfo.toString().trim() : '';
+
+                if (oldDebitStr === '' && oldCreditStr !== '') {
+                    newDebit = oldCreditInfo;
+                } else if (oldDebitStr !== '' && oldCreditStr === '') {
+                    newCredit = oldDebitInfo;
+                } else {
+                    // If both or neither, just swap anyway or handle appropriately
+                    newDebit = oldCreditInfo || '';
+                    newCredit = oldDebitInfo || '';
+                }
+
+                let newAccountNo = accountNo;
+                let newOffsetAccount = '50-000001';
+                let activities = getVal(row, 'Activities') || '';
+                let country = getVal(row, 'Country') || '';
+                let departments = getVal(row, 'Departments') || '';
+                let projectId = getVal(row, 'Project_ID') || getVal(row, 'Project ID') || '';
+                let propertyId = getVal(row, 'Property_ID') || getVal(row, 'Property ID') || '';
+
+                let bankInfo = WARBA_BANK_INFO.find(info => info.accountNo === accountNo || info.oldAccountNo === accountNo) || 
+                                CLOVER_BANK_INFO.find(info => info.accountNo === accountNo || info.oldAccountNo === accountNo);
+                
+                if (bankInfo) {
+                    activities = bankInfo.activities;
+                    country = bankInfo.country;
+                    departments = bankInfo.departments;
+                    projectId = bankInfo.projectId;
+                    propertyId = bankInfo.propertyId;
+
+                    // For Clover, we used BANK_ACCOUNT_MAPPING, but since Warba already has correct new account as `accountNo` (e.g. WTAA-61012):
+                    if (BANK_ACCOUNT_MAPPING[bankInfo.accountName]) {
+                        newAccountNo = BANK_ACCOUNT_MAPPING[bankInfo.accountName];
+                    } else {
+                        // Default to the mapped account No (e.g. from Warba)
+                        newAccountNo = bankInfo.accountNo || newAccountNo;
+                    }
+                    
+                    if (WARBA_VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName]) {
+                        newOffsetAccount = WARBA_VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName];
+                    } else if (VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName]) {
+                        newOffsetAccount = VENDOR_OFFSET_ACCOUNTS[bankInfo.accountName];
+                    }
+                }
+
+                const formatDate = (val: any) => {
+                    if (!val) return '';
+                    if (val instanceof Date) {
+                        const day = String(val.getDate()).padStart(2, '0');
+                        const month = String(val.getMonth() + 1).padStart(2, '0');
+                        const year = val.getFullYear();
+                        return `${day}-${month}-${year}`;
+                    }
+                    if (typeof val === 'number') {
+                        try {
+                            const date = XLSX.SSF.parse_date_code(val);
+                            const day = String(date.d).padStart(2, '0');
+                            const month = String(date.m).padStart(2, '0');
+                            const year = date.y;
+                            return `${day}-${month}-${year}`;
+                        } catch (e) {
+                            return val.toString();
+                        }
+                    }
+                    return val.toString();
+                };
+
+                const newEntry = {
+                    "Journal Number": journalNumberCounter,
+                    "Journal Name": "GenJournal",
+                    "Line Num": lineNumCounter,
+                    "Posting Date": formatDate(getVal(row, 'Posting Date')),
+                    "Account Type - Ledger - 0/ Customer - 1 /Vendor - 2/ Fixed assets - 5/ Bank - 6": 1, // 1 for Customer
+                    "Account No": '49-000001',
+                    "Description": (() => {
+                        const desc = (getVal(row, 'Description') || '').toString();
+                        return desc.split('/')[0].trim();
+                    })(),
+                    "Debit Amount": newDebit,
+                    "Credit Amount": newCredit,
+                    "Currency Code": getVal(row, 'Currency Code') || 'KWD',
+                    "Exchange Rate": getVal(row, 'Exchange Rate') || 100,
+                    "Offset account Type - Ledger - 0/ Customer - 1 /Vendor - 2/ Fixed assets - 5/ Bank - 6": '', // Empty to match output
+                    "Offset account": 0, // Integer 0 to match output
+                    "Invoice No": '2101432',
+                    "Document No": getVal(row, 'Invoice No') || getVal(row, 'Invoice no') || '',
+                    "Document Date": '', // Empty to match output
+                    "Due Date": formatDate(getVal(row, 'Posting Date')) || formatDate(getVal(row, 'Due Date')),
+                    "Asset trans type - Acq - 1 / Depre - 3": getVal(row, 'Asset Trans Type') || getVal(row, 'Asset trans type') || '',
+                    "Posting Profile": getVal(row, 'Posting Profile') || '',
+                    "Payment Mode": getVal(row, 'Payment Mode') || '',
+                    "Payment Reference": getVal(row, 'Payment Reference') || '',
+                    "Number of Voucher": lineNumCounter,
+                    "Activities": activities,
+                    "Country": country,
+                    "Departments": departments,
+                    "Project_ID": projectId,
+                    "Property_ID": propertyId
+                };
+
+                convertedEntries.push(newEntry);
+            }
+            return convertedEntries;
+        } catch (err) {
+            throw err;
+        }
     };
 
     const handleProcess = async () => {
@@ -3525,6 +4808,430 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 export default FileUploader;
 
 ========================================
+ FILE: components/GoogleSheetsExporter.tsx
+========================================
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  googleSignIn,
+  initAuth,
+  logout,
+  listSpreadsheets,
+  createSpreadsheet,
+  appendSpreadsheetData,
+  type SpreadsheetInfo,
+} from "../services/googleSheetsService";
+import {
+  FileSpreadsheet,
+  Plus,
+  ArrowRight,
+  LogOut,
+  Loader2,
+  CheckCircle,
+  ExternalLink,
+  ChevronDown,
+} from "lucide-react";
+
+interface GoogleSheetsExporterProps {
+  /**
+   * The list of row values to be appended (excluding headers)
+   */
+  rows: any[][];
+  /**
+   * Column headers
+   */
+  headers: string[];
+  /**
+   * Default title when creating a new sheet
+   */
+  defaultTitle?: string;
+  /**
+   * Optional callback on successful export
+   */
+  onSuccess?: (spreadsheetUrl: string) => void;
+}
+
+export const GoogleSheetsExporter: React.FC<GoogleSheetsExporterProps> = ({
+  rows,
+  headers,
+  defaultTitle = "Journal_Entries_Export",
+  onSuccess,
+}) => {
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Sheet configuration state
+  const [mode, setMode] = useState<"create" | "existing">("create");
+  const [sheetTitle, setSheetTitle] = useState(defaultTitle);
+  const [spreadsheets, setSpreadsheets] = useState<SpreadsheetInfo[]>([]);
+  const [selectedSheetId, setSelectedSheetId] = useState<string>("");
+  const [isLoadingSheets, setIsLoadingSheets] = useState(false);
+
+  // Progress/Status state
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [createdUrl, setCreatedUrl] = useState("");
+
+  // Initialize Auth state
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (currentUser, currentToken) => {
+        setUser(currentUser);
+        setToken(currentToken);
+        setIsInitializing(false);
+      },
+      () => {
+        setUser(null);
+        setToken(null);
+        setIsInitializing(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch spreadsheets when authenticated
+  const fetchSpreadsheets = useCallback(async (authToken: string) => {
+    setIsLoadingSheets(true);
+    try {
+      const list = await listSpreadsheets(authToken);
+      setSpreadsheets(list);
+      if (list.length > 0) {
+        setSelectedSheetId(list[0].id);
+      }
+    } catch (err: any) {
+      console.error("Failed to load spreadsheets:", err);
+    } finally {
+      setIsLoadingSheets(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      fetchSpreadsheets(token);
+    }
+  }, [token, fetchSpreadsheets]);
+
+  // Handle Login
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    setStatus("idle");
+    setStatusMessage("");
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setUser(result.user);
+        setToken(result.accessToken);
+      }
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      setStatus("error");
+      setStatusMessage("Sign-in failed. Please try again.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    setToken(null);
+    setStatus("idle");
+    setStatusMessage("");
+  };
+
+  // Handle Export
+  const handleExport = async () => {
+    if (!token) {
+      setStatus("error");
+      setStatusMessage("You must sign in with Google first.");
+      return;
+    }
+
+    if (rows.length === 0) {
+      setStatus("error");
+      setStatusMessage("No rows selected to export.");
+      return;
+    }
+
+    setStatus("loading");
+    setStatusMessage("Exporting your data...");
+
+    try {
+      let sheetId = selectedSheetId;
+      let sheetUrl = "";
+
+      if (mode === "create") {
+        setStatusMessage("Creating new spreadsheet...");
+        const title = sheetTitle.trim() || defaultTitle;
+        const result = await createSpreadsheet(token, title, headers);
+        sheetId = result.spreadsheetId;
+        sheetUrl = result.spreadsheetUrl;
+        setStatusMessage("Writing rows...");
+      } else {
+        setStatusMessage("Connecting to existing spreadsheet...");
+        sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+      }
+
+      // Sheets API append expects and can append multiple rows
+      // We append starting from Sheet1!A1
+      await appendSpreadsheetData(token, sheetId, "Sheet1!A1", rows);
+
+      setStatus("success");
+      setStatusMessage(`Successfully exported ${rows.length} rows of data!`);
+      setCreatedUrl(sheetUrl);
+
+      if (onSuccess) {
+        onSuccess(sheetUrl);
+      }
+
+      // Refresh sheets list to include the newly created sheet if applicable
+      if (mode === "create") {
+        fetchSpreadsheets(token);
+      }
+    } catch (err: any) {
+      console.error("Export error:", err);
+      setStatus("error");
+      setStatusMessage(err.message || "Export failed. Please try again.");
+    }
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center p-4 bg-dark-300 rounded-lg border border-dark-300">
+        <Loader2 className="w-5 h-5 text-sky-400 animate-spin mr-2" />
+        <span className="text-sm text-slate-400">Loading Google Sheets integration...</span>
+      </div>
+    );
+  }
+
+  // --- Render Login view if not signed in ---
+  if (!user || !token) {
+    return (
+      <div className="bg-dark-200 border border-dark-300 rounded-xl p-6 text-center shadow-lg animate-fade-in">
+        <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-lg bg-green-500/10 text-green-400 mb-4 border border-green-500/20">
+          <FileSpreadsheet className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-200 mb-2">Google Sheets Integration</h3>
+        <p className="text-sm text-slate-400 max-w-sm mx-auto mb-5">
+          Connect your Google Drive and Google Sheets to export and append your processed journal entries directly.
+        </p>
+
+        <button
+          onClick={handleLogin}
+          disabled={isLoggingIn}
+          className="mx-auto flex items-center justify-center px-4 py-2 bg-white text-slate-800 font-medium rounded-lg border border-slate-300 shadow-sm hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500"
+          id="btn-google-sheets-signin"
+        >
+          {isLoggingIn ? (
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-slate-600" />
+          ) : (
+            <svg
+              className="w-5 h-5 mr-3"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                fill="#EA4335"
+              />
+            </svg>
+          )}
+          {isLoggingIn ? "Connecting..." : "Sign in with Google"}
+        </button>
+      </div>
+    );
+  }
+
+  // --- Render authenticated exporter view ---
+  return (
+    <div className="bg-dark-200 border border-dark-300 rounded-xl p-6 shadow-lg animate-fade-in space-y-4">
+      {/* User info Header */}
+      <div className="flex items-center justify-between border-b border-dark-300 pb-3">
+        <div className="flex items-center space-x-3">
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.displayName || "User Avatar"}
+              className="w-8 h-8 rounded-full border border-dark-300"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-xs">
+              {user.displayName?.charAt(0) || "U"}
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-slate-400">Connected Google Account</p>
+            <p className="text-sm font-semibold text-slate-200 truncate max-w-[200px]">
+              {user.displayName || user.email}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-dark-300 transition-colors"
+          title="Sign out of Google"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Selector Options */}
+      <div className="space-y-3">
+        <div className="flex bg-dark-300 p-1 rounded-lg border border-dark-300/50">
+          <button
+            onClick={() => {
+              setMode("create");
+              setStatus("idle");
+            }}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              mode === "create"
+                ? "bg-sky-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Create New Sheet
+          </button>
+          <button
+            onClick={() => {
+              setMode("existing");
+              setStatus("idle");
+              if (spreadsheets.length === 0) {
+                fetchSpreadsheets(token);
+              }
+            }}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              mode === "existing"
+                ? "bg-sky-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Append to Existing
+          </button>
+        </div>
+
+        {/* Create Mode Inputs */}
+        {mode === "create" && (
+          <div className="space-y-2 animate-fade-in">
+            <label className="block text-xs font-medium text-slate-400">
+              New Spreadsheet Title
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={sheetTitle}
+                onChange={(e) => setSheetTitle(e.target.value)}
+                className="w-full bg-dark-300 border border-dark-300/50 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="Journal_Entries_Export"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Existing Mode Selector */}
+        {mode === "existing" && (
+          <div className="space-y-2 animate-fade-in">
+            <label className="block text-xs font-medium text-slate-400">
+              Select Destination Spreadsheet
+            </label>
+            {isLoadingSheets ? (
+              <div className="flex items-center space-x-2 text-xs text-slate-400 p-2 bg-dark-300 rounded-lg border border-dark-300/50">
+                <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                <span>Loading your spreadsheets...</span>
+              </div>
+            ) : spreadsheets.length === 0 ? (
+              <div className="text-xs text-amber-400 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                No recent spreadsheets found in Google Drive. Try creating a new one instead.
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={selectedSheetId}
+                  onChange={(e) => setSelectedSheetId(e.target.value)}
+                  className="w-full bg-dark-300 border border-dark-300/50 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 appearance-none pr-10"
+                >
+                  {spreadsheets.map((sheet) => (
+                    <option key={sheet.id} value={sheet.id}>
+                      {sheet.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons & Status feedback */}
+      <div className="space-y-3 pt-2">
+        <button
+          onClick={handleExport}
+          disabled={status === "loading" || rows.length === 0}
+          className="w-full flex items-center justify-center py-2.5 px-4 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        >
+          {status === "loading" ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+          )}
+          {status === "loading" ? "Exporting to Sheets..." : `Export ${rows.length} Rows to Google Sheets`}
+        </button>
+
+        {/* Status Feedbacks */}
+        {status === "loading" && (
+          <p className="text-xs text-slate-400 text-center animate-pulse">
+            {statusMessage}
+          </p>
+        )}
+
+        {status === "error" && (
+          <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-200 rounded-lg text-xs">
+            {statusMessage}
+          </div>
+        )}
+
+        {status === "success" && (
+          <div className="p-4 bg-green-950/40 border border-green-500/30 text-green-200 rounded-lg space-y-2 animate-fade-in text-xs">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+              <span className="font-semibold">{statusMessage}</span>
+            </div>
+            {createdUrl && (
+              <a
+                href={createdUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center text-sky-400 hover:text-sky-300 font-semibold underline"
+              >
+                Open Google Sheet <ExternalLink className="w-3 h-3 ml-1" />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default GoogleSheetsExporter;
+
+
+========================================
  FILE: components/JournalEntryTable.tsx
 ========================================
 import React from 'react';
@@ -3680,6 +5387,7 @@ import * as pdfjs from 'pdfjs-dist';
 import JSZip from 'jszip';
 import JournalEntryTable from './JournalEntryTable';
 import { extractTextFromExcel } from '../services/excelService';
+import GoogleSheetsExporter from './GoogleSheetsExporter';
 
 // Worker path is set globally in pdfService.ts.
 pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
@@ -4021,6 +5729,38 @@ const MerchantEntryAutomation: React.FC = () => {
         );
     }, [journalEntriesByFile, searchTerm]);
 
+    const googleSheetsRows = useMemo(() => {
+        return filteredEntries.map(entry => [
+            entry.journalNumber,
+            entry.journalName,
+            entry.lineNum,
+            entry.postingDate,
+            entry.accountType,
+            entry.accountNo,
+            entry.description,
+            entry.debitAmount,
+            entry.creditAmount,
+            entry.currencyCode,
+            entry.exchangeRate,
+            entry.offsetAccountType,
+            entry.offsetAccount,
+            entry.invoiceNo,
+            entry.documentNo,
+            entry.documentDate,
+            entry.dueDate,
+            entry.assetTransType,
+            entry.postingProfile,
+            entry.paymentMode,
+            entry.paymentReference,
+            entry.numberOfVoucher,
+            entry.activities,
+            entry.country,
+            entry.departments,
+            entry.projectId,
+            entry.propertyId
+        ]);
+    }, [filteredEntries]);
+
 
     const getRightPanelTitle = () => {
         if (hasJournalEntries || hasErrors) return "2. Download Results";
@@ -4133,6 +5873,13 @@ const MerchantEntryAutomation: React.FC = () => {
                                         Download as One Sheet
                                     </button>
                                 </div>
+                                <div className="border-t border-dark-300 pt-4 mt-4">
+                                    <GoogleSheetsExporter 
+                                        rows={googleSheetsRows} 
+                                        headers={OUTPUT_HEADER} 
+                                        defaultTitle="Merchant_Journal_Entries"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -4157,7 +5904,6 @@ export default MerchantEntryAutomation;
 import React, { useState, useMemo } from "react";
 import FileUploader from "./FileUploader";
 import { extractTextFromPdf } from "../services/pdfService";
-import { getEndingBalanceFromText } from "../services/balanceGeminiService";
 import {
   SpinnerIcon,
   ProcessIcon,
@@ -4167,6 +5913,7 @@ import {
   DownloadIcon,
 } from "./icons";
 import { PDFDocument } from "pdf-lib";
+import JSZip from "jszip";
 import { CLOVER_BANK_INFO, WARBA_BANK_INFO } from "../constants";
 
 const ALL_BANK_INFO = [...CLOVER_BANK_INFO, ...WARBA_BANK_INFO];
@@ -4187,13 +5934,110 @@ function resolveAccountNumber(rawNumber: string) {
   return found ? found.accountNo : rawNumber;
 }
 
+function fastExtractAccountDetails(text: string, filename: string): { resolvedAccount: string, corporateName: string, accountNumber: string } | null {
+  const normalizedText = text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const normalizedFilename = filename.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  
+  // 1. Exact match in filename
+  for (const info of ALL_BANK_INFO) {
+    if (info.accountNo) {
+      const cleanAcc = info.accountNo.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      if (normalizedFilename.includes(cleanAcc)) {
+        return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo || info.accountNo
+        };
+      }
+    }
+    if (info.oldAccountNo) {
+      const cleanOld = info.oldAccountNo.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      if (normalizedFilename.includes(cleanOld)) {
+        return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo
+        };
+      }
+    }
+  }
+
+  // 2. Extracted 4-5 digit code from filename
+  const filenameNumberMatch = filename.match(/(?:^|[^0-9])(\d{4,5})(?:[^0-9]|$)/);
+  if (filenameNumberMatch) {
+    const code = filenameNumberMatch[1];
+    for (const info of ALL_BANK_INFO) {
+      if (info.accountNo && info.accountNo.endsWith(code)) {
+         return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo || info.accountNo
+        };
+      }
+      if (info.oldAccountNo && info.oldAccountNo.endsWith(code)) {
+         return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo
+        };
+      }
+    }
+  }
+
+  // 3. Exact match in document text
+  for (const info of ALL_BANK_INFO) {
+    if (info.accountNo) {
+      const cleanAcc = info.accountNo.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      if (normalizedText.includes(cleanAcc)) {
+        return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo || info.accountNo
+        };
+      }
+    }
+    if (info.oldAccountNo) {
+      const cleanOld = info.oldAccountNo.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      if (normalizedText.includes(cleanOld)) {
+        return {
+          resolvedAccount: info.accountNo,
+          corporateName: info.accountName,
+          accountNumber: info.oldAccountNo
+        };
+      }
+    }
+  }
+
+  // 4. Fallback: random 10-14 digit number in filename
+  const fallbackFilenameMatch = filename.match(/\b\d{10,14}\b/);
+  if (fallbackFilenameMatch) {
+    return {
+      resolvedAccount: fallbackFilenameMatch[0],
+      corporateName: "N/A",
+      accountNumber: fallbackFilenameMatch[0]
+    };
+  }
+
+  // 5. Fallback: random 10-14 digit number in text
+  const fallbackMatch = text.match(/\b\d{10,14}\b/);
+  if (fallbackMatch) {
+    return {
+      resolvedAccount: fallbackMatch[0],
+      corporateName: "N/A",
+      accountNumber: fallbackMatch[0]
+    };
+  }
+
+  return null;
+}
+
 interface FileResult {
   file: File;
   status: "pending" | "processing" | "done" | "error";
-  corporateName?: string;
-  accountNumber?: string;
   documentType?: string;
   resolvedAccount?: string;
+  corporateName?: string;
+  accountNumber?: string;
   errorMsg?: string;
 }
 
@@ -4235,19 +6079,16 @@ const MergePdfsAutomation: React.FC = () => {
 
       try {
         const text = await extractTextFromPdf(fileResult.file);
-        // Reuse getEndingBalanceFromText just to get account number and details
-        const extractedInfo = await getEndingBalanceFromText(text);
+        const extractedDetails = fastExtractAccountDetails(text, fileResult.file.name);
 
-        if (extractedInfo) {
+        if (extractedDetails) {
           fileResult.status = "done";
-          fileResult.corporateName = extractedInfo.corporateName;
-          fileResult.accountNumber = extractedInfo.accountNumber;
-          fileResult.resolvedAccount = resolveAccountNumber(
-            extractedInfo.accountNumber,
-          );
+          fileResult.resolvedAccount = resolveAccountNumber(extractedDetails.resolvedAccount);
+          fileResult.corporateName = extractedDetails.corporateName;
+          fileResult.accountNumber = extractedDetails.accountNumber;
         } else {
           fileResult.status = "error";
-          fileResult.errorMsg = "Failed to extract required details.";
+          fileResult.errorMsg = "Unmatched: Could not find account number.";
         }
       } catch (error) {
         console.error("Error processing file", fileResult.file.name, error);
@@ -4268,7 +6109,6 @@ const MergePdfsAutomation: React.FC = () => {
     setFiles([]);
   };
 
-  // Group files by resolvedAccount
   const matchedGroups = useMemo(() => {
     const groups: Record<
       string,
@@ -4297,15 +6137,22 @@ const MergePdfsAutomation: React.FC = () => {
     );
   }, [files]);
 
+  const unmatchedStatements = useMemo(() => {
+    return files.filter(f => f.documentType === "statement" && (f.status === "error" || (f.status === "done" && !matchedGroups.some(([acc, group]) => group.statements.includes(f)))));
+  }, [files, matchedGroups]);
+
+  const unmatchedReconciliations = useMemo(() => {
+    return files.filter(f => f.documentType === "reconciliation" && (f.status === "error" || (f.status === "done" && !matchedGroups.some(([acc, group]) => group.reconciliations.includes(f)))));
+  }, [files, matchedGroups]);
+
   const generateMergedPdfBlob = async (
     statements: FileResult[],
     reconciliations: FileResult[],
   ): Promise<Blob> => {
     const mergedPdf = await PDFDocument.create();
 
-    // Add statements first
-    for (const stmt of statements) {
-      const arrayBuffer = await stmt.file.arrayBuffer();
+    for (const recon of reconciliations) {
+      const arrayBuffer = await recon.file.arrayBuffer();
       const srcDoc = await PDFDocument.load(arrayBuffer);
       const copiedPages = await mergedPdf.copyPages(
         srcDoc,
@@ -4314,9 +6161,8 @@ const MergePdfsAutomation: React.FC = () => {
       copiedPages.forEach((page) => mergedPdf.addPage(page));
     }
 
-    // Add reconciliations
-    for (const recon of reconciliations) {
-      const arrayBuffer = await recon.file.arrayBuffer();
+    for (const stmt of statements) {
+      const arrayBuffer = await stmt.file.arrayBuffer();
       const srcDoc = await PDFDocument.load(arrayBuffer);
       const copiedPages = await mergedPdf.copyPages(
         srcDoc,
@@ -4372,7 +6218,6 @@ const MergePdfsAutomation: React.FC = () => {
         setTimeout(() => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
-          // We don't remove the iframe immediately so the print dialog stays open
         }, 500);
       };
     } catch (err) {
@@ -4382,11 +6227,32 @@ const MergePdfsAutomation: React.FC = () => {
     setIsMerging(false);
   };
 
-  const downloadAllMergedPdfs = async () => {
+  const downloadAllMergedPdfsZip = async () => {
     if (matchedGroups.length === 0) return;
-    for (const [account, group] of matchedGroups) {
-      await downloadMergedPdf(account, group.statements, group.reconciliations);
+    setIsMerging(true);
+    try {
+      const zip = new JSZip();
+      
+      for (const [account, group] of matchedGroups) {
+        const blob = await generateMergedPdfBlob(group.statements, group.reconciliations);
+        zip.file(`Merged_Recon_Stmt_${account}.pdf`, blob);
+      }
+      
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Merged_Reconciliations.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to zip PDFs:", err);
+      alert("Failed to zip PDFs. Please try again.");
     }
+    setIsMerging(false);
   };
 
   return (
@@ -4396,12 +6262,25 @@ const MergePdfsAutomation: React.FC = () => {
           Match & Merge Bank Statements and Reconciliations
         </h2>
         <div className="space-x-3 flex items-center">
+          {matchedGroups.length > 0 && (
+            <button
+              onClick={downloadAllMergedPdfsZip}
+              disabled={isMerging}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-sm font-medium flex items-center shadow-sm shadow-indigo-900/20"
+            >
+              {isMerging ? (
+                <><SpinnerIcon className="w-4 h-4 mr-2 animate-spin" /> Zipping...</>
+              ) : (
+                <><DownloadIcon className="w-4 h-4 mr-2" /> Download Merged ZIP</>
+              )}
+            </button>
+          )}
           <button
             onClick={clearFiles}
             disabled={isProcessing || files.length === 0}
             className="px-4 py-2 border border-dark-400 bg-dark-200 text-slate-300 rounded-lg hover:bg-dark-300 hover:text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Clear List
+            Clear
           </button>
           <button
             onClick={processFiles}
@@ -4463,8 +6342,7 @@ const MergePdfsAutomation: React.FC = () => {
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">File Name</th>
                 <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Corporate Name</th>
-                <th className="px-6 py-4">Account Number</th>
+                <th className="px-6 py-4">Detected Account</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-300 text-slate-300">
@@ -4485,7 +6363,6 @@ const MergePdfsAutomation: React.FC = () => {
                     {file.status === "done" && (
                       <span
                         className="flex items-center text-emerald-400"
-                        title={`Resolved Acc: ${file.resolvedAccount}`}
                       >
                         <CheckCircleIcon className="w-4 h-4 mr-1.5" /> Done
                       </span>
@@ -4508,9 +6385,8 @@ const MergePdfsAutomation: React.FC = () => {
                   <td className="px-6 py-4 capitalize">
                     {file.documentType || "-"}
                   </td>
-                  <td className="px-6 py-4">{file.corporateName || "-"}</td>
                   <td className="px-6 py-4 font-mono">
-                    {file.accountNumber || "-"}
+                    {file.resolvedAccount || "-"}
                   </td>
                 </tr>
               ))}
@@ -4519,19 +6395,165 @@ const MergePdfsAutomation: React.FC = () => {
         </div>
       )}
 
+      {(files.length > 0) && (
+        <div className="bg-dark-200 rounded-xl p-6 border border-dark-300 mb-8 mt-8">
+          <h2 className="text-xl font-bold text-white mb-6">Processing Report</h2>
+          
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-slate-200 mb-2">1. Bank Statements with NO Matching Reconciliation</h3>
+            {unmatchedStatements.length > 0 ? (
+              <>
+                <p className="text-sm text-slate-400 mb-4">There {unmatchedStatements.length === 1 ? "is 1 bank statement" : `are ${unmatchedStatements.length} bank statements`} that {unmatchedStatements.length === 1 ? "does" : "do"} not have a corresponding reconciliation file.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-dark-300 text-slate-400">
+                      <tr>
+                        <th className="px-4 py-2">Corporate Name</th>
+                        <th className="px-4 py-2">Account Number</th>
+                        <th className="px-4 py-2">File Name</th>
+                        <th className="px-4 py-2">Status</th>
+                        <th className="px-4 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-300 text-slate-300">
+                      {unmatchedStatements.map((f, i) => (
+                         <tr key={i}>
+                           <td className="px-4 py-2">{f.corporateName || "N/A"}</td>
+                           <td className="px-4 py-2 font-mono">{f.accountNumber || "N/A"}</td>
+                           <td className="px-4 py-2 max-w-[200px] truncate" title={f.file.name}>{f.file.name}</td>
+                           <td className="px-4 py-2 text-rose-400">No Match Found</td>
+                           <td className="px-4 py-2 flex justify-end">
+                              <label className="cursor-pointer inline-flex items-center px-3 py-1 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 border border-sky-500/20 rounded text-xs font-medium transition-colors">
+                                <span className="mr-1">+ Add Missing Recon</span>
+                                <input 
+                                   type="file" 
+                                   className="hidden" 
+                                   multiple
+                                   accept="application/pdf"
+                                   onChange={(e) => {
+                                     if (e.target.files) {
+                                       handleFilesAdded(Array.from(e.target.files), "reconciliation");
+                                       e.target.value = "";
+                                     }
+                                   }} 
+                                />
+                              </label>
+                           </td>
+                         </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <>
+                 <p className="text-sm text-emerald-400 mb-4">All bank statements have been successfully matched. There are 0 unmatched statement records.</p>
+                 <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-dark-300 text-slate-400">
+                      <tr>
+                        <th className="px-4 py-2">Corporate Name</th>
+                        <th className="px-4 py-2">Account Number</th>
+                        <th className="px-4 py-2">File Name</th>
+                        <th className="px-4 py-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-300 text-slate-300">
+                         <tr>
+                           <td className="px-4 py-2">N/A</td>
+                           <td className="px-4 py-2">N/A</td>
+                           <td className="px-4 py-2">None (All matched successfully)</td>
+                           <td className="px-4 py-2 text-emerald-400">Fully Reconciled</td>
+                         </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-slate-200 mb-2">2. Reconciliations with NO Matching Bank Statement</h3>
+            {unmatchedReconciliations.length > 0 ? (
+              <>
+                <p className="text-sm text-slate-400 mb-4">There {unmatchedReconciliations.length === 1 ? "is 1 reconciliation file" : `are ${unmatchedReconciliations.length} reconciliation files`} that {unmatchedReconciliations.length === 1 ? "does" : "do"} not have a corresponding bank statement.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-dark-300 text-slate-400">
+                      <tr>
+                        <th className="px-4 py-2">Corporate Name</th>
+                        <th className="px-4 py-2">Account Number</th>
+                        <th className="px-4 py-2">File Name</th>
+                        <th className="px-4 py-2">Status</th>
+                        <th className="px-4 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-300 text-slate-300">
+                      {unmatchedReconciliations.map((f, i) => (
+                         <tr key={i}>
+                           <td className="px-4 py-2">{f.corporateName || "N/A"}</td>
+                           <td className="px-4 py-2 font-mono">{f.accountNumber || "N/A"}</td>
+                           <td className="px-4 py-2 max-w-[200px] truncate" title={f.file.name}>{f.file.name}</td>
+                           <td className="px-4 py-2 text-rose-400">No Match Found</td>
+                           <td className="px-4 py-2 flex justify-end">
+                              <label className="cursor-pointer inline-flex items-center px-3 py-1 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 border border-sky-500/20 rounded text-xs font-medium transition-colors">
+                                <span className="mr-1">+ Add Missing Statement</span>
+                                <input 
+                                   type="file" 
+                                   className="hidden" 
+                                   multiple
+                                   accept="application/pdf"
+                                   onChange={(e) => {
+                                     if (e.target.files) {
+                                       handleFilesAdded(Array.from(e.target.files), "statement");
+                                       e.target.value = "";
+                                     }
+                                   }} 
+                                />
+                              </label>
+                           </td>
+                         </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <>
+                 <p className="text-sm text-emerald-400 mb-4">All reconciliation files have been successfully matched. There are 0 unmatched reconciliation records.</p>
+                 <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-dark-300 text-slate-400">
+                      <tr>
+                        <th className="px-4 py-2">Corporate Name</th>
+                        <th className="px-4 py-2">Account Number</th>
+                        <th className="px-4 py-2">File Name</th>
+                        <th className="px-4 py-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-300 text-slate-300">
+                         <tr>
+                           <td className="px-4 py-2">N/A</td>
+                           <td className="px-4 py-2">N/A</td>
+                           <td className="px-4 py-2">None (All matched successfully)</td>
+                           <td className="px-4 py-2 text-emerald-400">Fully Reconciled</td>
+                         </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+        </div>
+      )}
+
       {matchedGroups.length > 0 && (
         <div className="bg-dark-200 rounded-xl p-6 border border-dark-300">
-          <div className="flex justify-between items-center mb-4">
+          <div className="mb-4">
             <h3 className="text-lg font-bold text-slate-100">
               Matched Bank Reconciliations & Statements
             </h3>
-            <button
-              onClick={downloadAllMergedPdfs}
-              disabled={isMerging}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors text-sm font-medium"
-            >
-              {isMerging ? "Merging All..." : "Download All Merged PDFs"}
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4556,7 +6578,7 @@ const MergePdfsAutomation: React.FC = () => {
                       disabled={isMerging}
                       className="px-3 py-1 bg-dark-400 hover:bg-dark-100 text-white text-xs rounded transition-colors flex items-center"
                     >
-                      <DownloadIcon className="w-3 h-3 mr-1" /> Download
+                      <DownloadIcon className="w-3 h-3 mr-1" /> PDF
                     </button>
                     <button
                       onClick={() =>
@@ -4582,7 +6604,7 @@ const MergePdfsAutomation: React.FC = () => {
                   </p>
                   <ul className="list-disc pl-5 mb-2 text-slate-400">
                     {group.statements.map((s, idx) => (
-                      <li key={idx} className="truncate">
+                      <li key={idx} className="truncate" title={s.file.name}>
                         {s.file.name}
                       </li>
                     ))}
@@ -4595,7 +6617,7 @@ const MergePdfsAutomation: React.FC = () => {
                   </p>
                   <ul className="list-disc pl-5 text-slate-400">
                     {group.reconciliations.map((r, idx) => (
-                      <li key={idx} className="truncate">
+                      <li key={idx} className="truncate" title={r.file.name}>
                         {r.file.name}
                       </li>
                     ))}
@@ -4613,6 +6635,7 @@ const MergePdfsAutomation: React.FC = () => {
 export default MergePdfsAutomation;
 
 
+
 ========================================
  FILE: components/POSEntryAutomation.tsx
 ========================================
@@ -4626,6 +6649,7 @@ import * as pdfjs from 'pdfjs-dist';
 import JSZip from 'jszip';
 import JournalEntryTable from './JournalEntryTable';
 import { extractTextFromExcel } from '../services/excelService';
+import GoogleSheetsExporter from './GoogleSheetsExporter';
 
 // Worker path is set globally in pdfService.ts.
 pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
@@ -5044,6 +7068,38 @@ const POSEntryAutomation: React.FC = () => {
         );
     }, [journalEntriesByFile, searchTerm]);
 
+    const googleSheetsRows = useMemo(() => {
+        return filteredEntries.map(entry => [
+            entry.journalNumber,
+            entry.journalName,
+            entry.lineNum,
+            entry.postingDate,
+            entry.accountType,
+            entry.accountNo,
+            entry.description,
+            entry.debitAmount,
+            entry.creditAmount,
+            entry.currencyCode,
+            entry.exchangeRate,
+            entry.offsetAccountType,
+            entry.offsetAccount,
+            entry.invoiceNo,
+            entry.documentNo,
+            entry.documentDate,
+            entry.dueDate,
+            entry.assetTransType,
+            entry.postingProfile,
+            entry.paymentMode,
+            entry.paymentReference,
+            entry.numberOfVoucher,
+            entry.activities,
+            entry.country,
+            entry.departments,
+            entry.projectId,
+            entry.propertyId
+        ]);
+    }, [filteredEntries]);
+
 
     const getRightPanelTitle = () => {
         if (hasJournalEntries || hasErrors) return "2. Download Results";
@@ -5162,6 +7218,13 @@ const POSEntryAutomation: React.FC = () => {
                                         Download POS 49
                                     </button>
                                 </div>
+                                <div className="border-t border-dark-300 pt-4 mt-4">
+                                    <GoogleSheetsExporter 
+                                        rows={googleSheetsRows} 
+                                        headers={OUTPUT_HEADER} 
+                                        defaultTitle="POS_Journal_Entries"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -5183,13 +7246,14 @@ export default POSEntryAutomation;
 ========================================
  FILE: components/POSReport.tsx
 ========================================
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DocumentIcon, ArrowPathIcon, CloudArrowUpIcon, DocumentChartBarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import * as pdfjs from 'pdfjs-dist';
 import { extractTransactionsFromText } from '../services/merchantGeminiService';
 import * as XLSX from 'xlsx';
 import { extractTextFromExcel } from '../services/excelService';
+import GoogleSheetsExporter from './GoogleSheetsExporter';
 
 // Worker path
 pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
@@ -5207,6 +7271,45 @@ const POSReport: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [reportData, setReportData] = useState<ReportItem[]>([]);
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+    const googleSheetsRows = useMemo(() => {
+        if (reportData.length === 0) return [];
+        const rows: any[] = [
+            [`KNET Collections & Transfer (${dateRange.start} - ${dateRange.end})`],
+            ['Clinic Name', 'Transaction Date', 'Account Number', 'Payment way', 'Amount (KWD)']
+        ];
+
+        let grandTotal = 0;
+        const clinicGroups = reportData.reduce((acc, item) => {
+            if (!acc[item.clinicName]) acc[item.clinicName] = [];
+            acc[item.clinicName].push(item);
+            return acc;
+        }, {} as Record<string, ReportItem[]>);
+
+        const paymentWayTotals: Record<string, number> = { 'POS': 0, 'Transfer': 0 };
+
+        (Object.entries(clinicGroups) as [string, ReportItem[]][]).forEach(([clinicName, items]) => {
+            let clinicTotal = 0;
+            items.forEach(item => {
+                const dateParts = item.transactionDate.split('-');
+                const formattedDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}` : item.transactionDate;
+                rows.push([clinicName, formattedDate, item.accountNumber, item.paymentWay, item.amount]);
+                clinicTotal += item.amount;
+                paymentWayTotals[item.paymentWay] = (paymentWayTotals[item.paymentWay] || 0) + item.amount;
+            });
+            rows.push([`${clinicName} Total`, '', '', '', clinicTotal]);
+            grandTotal += clinicTotal;
+        });
+
+        rows.push(['Grand Total', '', '', '', grandTotal]);
+        rows.push([]);
+        rows.push(['Payment way', 'Sum of Amount (KWD)']);
+        rows.push(['POS', paymentWayTotals['POS'] || 0]);
+        rows.push(['Transfer', paymentWayTotals['Transfer'] || 0]);
+        rows.push(['Grand Total', grandTotal]);
+
+        return rows;
+    }, [reportData, dateRange]);
 
     const onDrop = (acceptedFiles: File[]) => {
         setSelectedFiles(prev => [...prev, ...acceptedFiles]);
@@ -5475,6 +7578,13 @@ const POSReport: React.FC = () => {
                                 <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
                                 Download Excel Report
                            </button>
+                           <div className="border-t border-dark-300 pt-4 mt-2">
+                               <GoogleSheetsExporter 
+                                   rows={googleSheetsRows} 
+                                   headers={[]} 
+                                   defaultTitle={`POS_Report_${dateRange.start.replace(/\//g, '-')}`}
+                               />
+                           </div>
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
@@ -5725,28 +7835,168 @@ export default SettingsPanel;
 ========================================
  FILE: components/SmartMergeAutomation.tsx
 ========================================
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { processFiles, ProcessingResult } from '../services/smartMergeService';
-import { CheckCircle2, FileArchive, Printer, Upload, FileText } from 'lucide-react';
+import { CheckCircle2, FileArchive, Printer, Upload, FileText, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import JSZip from 'jszip';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
+
+const PreviewPdf = ({ blob }: { blob: Blob }) => {
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pageNum, setPageNum] = useState<number>(1);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [rendering, setRendering] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPdf = async () => {
+      try {
+        setError(null);
+        const arrBuffer = await blob.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrBuffer });
+        const pdf = await loadingTask.promise;
+        if (isMounted) {
+          setPdfDoc(pdf);
+          setNumPages(pdf.numPages);
+          setPageNum(1);
+        }
+      } catch (err) {
+        console.error("Error loading PDF:", err);
+        if (isMounted) {
+          setError("Failed to load PDF preview.");
+        }
+      }
+    };
+    loadPdf();
+    return () => {
+      isMounted = false;
+    };
+  }, [blob]);
+
+  useEffect(() => {
+    if (!pdfDoc) return;
+    let renderTask: any = null;
+    let isMounted = true;
+
+    const renderPage = async () => {
+      try {
+        setRendering(true);
+        const page = await pdfDoc.getPage(pageNum);
+        const canvas = canvasRef.current;
+        if (!canvas || !isMounted) return;
+
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        const viewport = page.getViewport({ scale: 1.5 });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+
+        renderTask = page.render(renderContext);
+        await renderTask.promise;
+        if (isMounted) {
+          setRendering(false);
+        }
+      } catch (err) {
+        console.error("Error rendering PDF page:", err);
+        if (isMounted) {
+          setRendering(false);
+        }
+      }
+    };
+
+    renderPage();
+
+    return () => {
+      isMounted = false;
+      if (renderTask) {
+        renderTask.cancel();
+      }
+    };
+  }, [pdfDoc, pageNum]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-4 bg-dark-300 border border-red-500/20 text-red-400 rounded-lg text-xs mt-2">
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 mt-2 w-full">
+      {/* Controls bar */}
+      <div className="flex items-center justify-between bg-dark-300 p-2 rounded-lg border border-dark-400 text-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={pageNum <= 1 || rendering}
+            onClick={(e) => { e.stopPropagation(); setPageNum(p => Math.max(1, p - 1)); }}
+            className="px-2.5 py-1 bg-dark-400 hover:bg-dark-500 text-slate-300 font-medium rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            disabled={pageNum >= numPages || rendering}
+            onClick={(e) => { e.stopPropagation(); setPageNum(p => Math.min(numPages, p + 1)); }}
+            className="px-2.5 py-1 bg-dark-400 hover:bg-dark-500 text-slate-300 font-medium rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next
+          </button>
+          <span className="text-slate-400 select-none">
+            Page <strong className="text-slate-200">{pageNum}</strong> of {numPages}
+          </span>
+        </div>
+        {rendering && (
+          <span className="text-amber-400 text-[11px] animate-pulse select-none">Rendering...</span>
+        )}
+      </div>
+      
+      {/* Canvas viewport wrapper */}
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        className="overflow-auto flex justify-center bg-dark-300 p-2 rounded-lg border border-dark-400 max-h-[650px] min-h-[300px]"
+      >
+        <canvas ref={canvasRef} className="max-w-full shadow-lg rounded" />
+      </div>
+    </div>
+  );
+};
 
 export default function SmartMergeAutomation() {
   const [mainPdf, setMainPdf] = useState<File | null>(null);
   const [bankStatements, setBankStatements] = useState<File[]>([]);
   const [csvFiles, setCsvFiles] = useState<File[]>([]);
+  const [emailPdfs, setEmailPdfs] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleToggleSelection = (idx: number) => {
+  const handleToggleSelection = (idx: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setSelectedIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(idx)) newSet.delete(idx);
       else newSet.add(idx);
       return newSet;
     });
+  };
+
+  const handleToggleExpand = (idx: number) => {
+    setExpandedId(prev => prev === idx ? null : idx);
   };
 
   const handleSelectAll = (e: React.MouseEvent) => {
@@ -5777,6 +8027,12 @@ export default function SmartMergeAutomation() {
     }
   };
 
+  const handleEmailFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setEmailPdfs(Array.from(e.target.files));
+    }
+  };
+
   const handleProcess = async () => {
     if (!mainPdf) {
       setError('Please select the Main PDF.');
@@ -5789,7 +8045,7 @@ export default function SmartMergeAutomation() {
     setError(null);
 
     try {
-      const processedResults = await processFiles(mainPdf, bankStatements, csvFiles, (msg) => {
+      const processedResults = await processFiles(mainPdf, bankStatements, csvFiles, emailPdfs, (msg) => {
         setStatus(msg);
       });
       setResults(processedResults);
@@ -5945,6 +8201,19 @@ export default function SmartMergeAutomation() {
               </div>
             </div>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email PDFs (Optional)</label>
+            <div className={`relative group transition-all rounded-lg border-2 border-dashed p-4 text-center ${emailPdfs.length > 0 ? 'bg-sky-500/5 border-sky-500/30' : 'border-dark-300 hover:border-sky-500/50'}`}>
+              <input type="file" multiple onChange={handleEmailFilesChange} accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" />
+              <div className="space-y-1.5">
+                <Mail className={`w-5 h-5 mx-auto ${emailPdfs.length > 0 ? 'text-sky-400' : 'text-slate-400'}`} />
+                <p className="text-[12px] font-medium leading-tight text-slate-200">
+                  {emailPdfs.length > 0 ? `${emailPdfs.length} emails loaded` : 'Email PDFs Folder (Optional)'}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-8 space-y-3">
@@ -5971,7 +8240,7 @@ export default function SmartMergeAutomation() {
               <h4 className="text-md font-medium text-slate-100">Generated Batches</h4>
               <p className="text-[11px] text-slate-400 mt-1">
                 {results.length > 0 
-                  ? `Processed ${results.length} batches. ${results.filter(r => r.matched).length} bank matches, ${results.filter(r => r.matchedCsvRows > 0).length} CSV links.`
+                  ? `Processed ${results.length} batches. ${results.filter(r => r.matched).length} bank matches, ${results.filter(r => r.matchedCsvRows > 0).length} CSV links, ${results.filter(r => r.matchedEmailsCount && r.matchedEmailsCount > 0).length} Email matches.`
                   : 'Upload files and run process to see results.'}
               </p>
             </div>
@@ -5995,45 +8264,66 @@ export default function SmartMergeAutomation() {
               <div className="divide-y divide-dark-300">
                 {results.map((res, idx) => {
                   const isSelected = selectedIds.has(idx);
+                  const isExpanded = expandedId === idx;
                   return (
-                    <div 
-                      key={idx} 
-                      onClick={() => handleToggleSelection(idx)}
-                      className={`
-                        grid grid-cols-[40px_1.5fr_1fr_120px] items-center p-3 px-4 transition-colors text-[12px] cursor-pointer
-                        ${isSelected ? 'bg-emerald-500/5' : 'hover:bg-dark-300'}
-                      `}
-                    >
-                      <div className="flex justify-center">
-                        <div className={`
-                          w-4 h-4 rounded border flex items-center justify-center transition-colors
-                          ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500'}
-                        `}>
-                          {isSelected && <CheckCircle2 className="w-3 h-3 text-dark-100" />}
+                    <div key={idx} className="flex flex-col border-b border-dark-300 last:border-0">
+                      <div 
+                        onClick={() => handleToggleExpand(idx)}
+                        className={`
+                          grid grid-cols-[40px_1.5fr_1fr_120px] items-center p-3 px-4 transition-colors text-[12px] cursor-pointer
+                          ${isSelected ? 'bg-emerald-500/5' : 'hover:bg-dark-300'}
+                        `}
+                      >
+                        <div className="flex justify-center" onClick={(e) => handleToggleSelection(idx, e)}>
+                          <div className={`
+                            w-4 h-4 rounded border flex items-center justify-center transition-colors
+                            ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-slate-500'}
+                          `}>
+                            {isSelected && <CheckCircle2 className="w-3 h-3 text-dark-100" />}
+                          </div>
+                        </div>
+                        <div className={`font-medium truncate pr-4 flex items-center gap-2 ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                          {res.fileName}
+                        </div>
+                        <div className="text-slate-400 truncate pr-4 flex items-center gap-2">
+                           {res.fileName.split('_')[0].split('.')[0]}
+                           {res.matchedCsvRows > 0 && (
+                             <span className="bg-amber-500/10 text-amber-500 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/20">
+                               CSV: {res.matchedCsvRows}
+                             </span>
+                           )}
+                           {res.matchedEmailsCount && res.matchedEmailsCount > 0 && (
+                             <span className="bg-sky-500/10 text-sky-400 text-[9px] px-1.5 py-0.5 rounded border border-sky-500/20" title={res.matchedEmailNames?.join(', ')}>
+                               Email: {res.matchedEmailsCount}
+                             </span>
+                           )}
+                        </div>
+                        <div className="flex justify-end">
+                          <span 
+                            className={`
+                              text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider
+                              ${res.matched || res.matchedCsvRows > 0 || (res.matchedEmailsCount && res.matchedEmailsCount > 0) ? 'bg-sky-500/15 text-sky-400' : 'bg-slate-500/15 text-slate-400'}
+                            `}>
+                            {res.matched && res.matchedCsvRows > 0 && res.matchedEmailsCount && res.matchedEmailsCount > 0 ? 'Merged (B+C+E)' :
+                             res.matched && res.matchedCsvRows > 0 ? 'Merged (B+C)' :
+                             res.matched && res.matchedEmailsCount && res.matchedEmailsCount > 0 ? 'Merged (B+E)' :
+                             res.matchedCsvRows > 0 && res.matchedEmailsCount && res.matchedEmailsCount > 0 ? 'Merged (C+E)' :
+                             res.matched ? 'Bank' : 
+                             res.matchedCsvRows > 0 ? 'CSV' : 
+                             res.matchedEmailsCount && res.matchedEmailsCount > 0 ? 'Email' : 'Split'}
+                          </span>
                         </div>
                       </div>
-                      <div className={`font-medium truncate pr-4 ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>
-                        {res.fileName}
-                      </div>
-                      <div className="text-slate-400 truncate pr-4 flex items-center gap-2">
-                         {res.fileName.split('_')[0].split('.')[0]}
-                         {res.matchedCsvRows > 0 && (
-                           <span className="bg-amber-500/10 text-amber-500 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/20">
-                             CSV: {res.matchedCsvRows}
-                           </span>
-                         )}
-                      </div>
-                      <div className="flex justify-end">
-                        <span 
-                          className={`
-                            text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider
-                            ${res.matched || res.matchedCsvRows > 0 ? 'bg-sky-500/15 text-sky-400' : 'bg-slate-500/15 text-slate-400'}
-                          `}>
-                          {res.matched && res.matchedCsvRows > 0 ? 'Merged (B+C)' : 
-                           res.matched ? 'Bank' : 
-                           res.matchedCsvRows > 0 ? 'CSV' : 'Split'}
-                        </span>
-                      </div>
+                      {isExpanded && (
+                        <div className="p-4 bg-dark-200/50 border-t border-dark-300">
+                          <div className="flex justify-between items-center mb-2">
+                             <h5 className="text-sm font-semibold text-slate-300">Document Preview</h5>
+                             <button onClick={() => downloadSingle(res)} className="text-[11px] text-sky-400 hover:underline">Download PDF</button>
+                          </div>
+                          <PreviewPdf blob={res.blob} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -6094,6 +8384,7 @@ import * as pdfjs from 'pdfjs-dist';
 import JSZip from 'jszip';
 import JournalEntryTable from './JournalEntryTable';
 import { extractTextFromExcel } from '../services/excelService';
+import GoogleSheetsExporter from './GoogleSheetsExporter';
 
 // Worker path is set globally in pdfService.ts.
 pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
@@ -6436,6 +8727,38 @@ const WarbaEntryAutomation: React.FC = () => {
         );
     }, [journalEntriesByFile, searchTerm]);
 
+    const googleSheetsRows = useMemo(() => {
+        return filteredEntries.map(entry => [
+            entry.journalNumber,
+            entry.journalName,
+            entry.lineNum,
+            entry.postingDate,
+            entry.accountType,
+            entry.accountNo,
+            entry.description,
+            entry.debitAmount,
+            entry.creditAmount,
+            entry.currencyCode,
+            entry.exchangeRate,
+            entry.offsetAccountType,
+            entry.offsetAccount,
+            entry.invoiceNo,
+            entry.documentNo,
+            entry.documentDate,
+            entry.dueDate,
+            entry.assetTransType,
+            entry.postingProfile,
+            entry.paymentMode,
+            entry.paymentReference,
+            entry.numberOfVoucher,
+            entry.activities,
+            entry.country,
+            entry.departments,
+            entry.projectId,
+            entry.propertyId
+        ]);
+    }, [filteredEntries]);
+
 
     const getRightPanelTitle = () => {
         if (hasJournalEntries || hasErrors) return "2. Download Results";
@@ -6548,6 +8871,13 @@ const WarbaEntryAutomation: React.FC = () => {
                                         Download as One Sheet
                                     </button>
                                 </div>
+                                <div className="border-t border-dark-300 pt-4 mt-4">
+                                    <GoogleSheetsExporter 
+                                        rows={googleSheetsRows} 
+                                        headers={OUTPUT_HEADER} 
+                                        defaultTitle="Warba_Journal_Entries"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -6614,11 +8944,13 @@ import MergePdfsAutomation from "./components/MergePdfsAutomation";
 import POSEntryAutomation from "./components/POSEntryAutomation";
 import POSReport from "./components/POSReport";
 import SmartMergeAutomation from "./components/SmartMergeAutomation";
+import BahrainCustPaymentAutomation from "./components/BahrainCustPaymentAutomation";
 import { getAnswerFromText } from "./services/geminiService";
+import Chatbot from "./components/Chatbot";
 
 import Convert001To49Automation from "./components/Convert001To49Automation";
 import {
-  Home, Stethoscope, Briefcase, FileSearch, MessageSquare, RefreshCw, Calculator, FileStack, Receipt, FileBarChart, Sparkles, Tags
+  Home, Stethoscope, Briefcase, FileSearch, MessageSquare, RefreshCw, Calculator, FileStack, Receipt, FileBarChart, Sparkles, Tags, FileText
 } from "lucide-react";
 
 // pdf.js is loaded from an import map, not a global script
@@ -6637,7 +8969,8 @@ type AppMode =
   | "merge_pdfs"
   | "pos_entry"
   | "pos_report"
-  | "smart_merge";
+  | "smart_merge"
+  | "bahrain_cust_payment";
 
 // --- PDF Q&A Components ---
 
@@ -6800,9 +9133,9 @@ const PdfQaComponent: React.FC = () => {
         `);
     printWindow.document.close();
 
-    const fileReader = new FileReader();
-    fileReader.onload = async (event) => {
-      const typedarray = new Uint8Array((event.target!.result as ArrayBuffer).slice(0));
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const typedarray = new Uint8Array(arrayBuffer.slice(0));
       const pdf = await pdfjsLib.getDocument(typedarray).promise;
       const container = printWindow.document.getElementById("container")!;
 
@@ -6826,8 +9159,11 @@ const PdfQaComponent: React.FC = () => {
       printWindow.focus();
       printWindow.print();
       printWindow.onafterprint = () => printWindow.close();
-    };
-    fileReader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("Print mapping error:", error);
+      printWindow.document.getElementById("loader")!.innerText = "Error preparing pages.";
+      setTimeout(() => printWindow.close(), 3000);
+    }
   };
 
   return (
@@ -7471,7 +9807,57 @@ const ApiKeyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
   onClose,
 }) => {
+  const [provider, setProvider] = useState(() => localStorage.getItem('llm_provider') || 'gemini');
+  const [baseUrl, setBaseUrl] = useState(() => localStorage.getItem('llm_base_url') || 'http://localhost:11434/v1');
+  const [modelName, setModelName] = useState(() => localStorage.getItem('llm_model') || 'llama3');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [modelError, setModelError] = useState("");
+
+  useEffect(() => {
+    if (isOpen && provider === 'local' && availableModels.length === 0) {
+      fetchModels();
+    }
+  }, [isOpen, provider]);
+
   if (!isOpen) return null;
+
+  const fetchModels = async () => {
+    setIsFetchingModels(true);
+    setModelError("");
+    try {
+      const res = await fetch(`${baseUrl}/models`);
+      if (!res.ok) throw new Error("Failed to fetch models");
+      const data = await res.json();
+      if (data && data.data && Array.isArray(data.data)) {
+        const models = data.data.map((m: any) => m.id);
+        setAvailableModels(models);
+        if (models.length > 0 && !models.includes(modelName)) {
+           setModelName(models[0]);
+        }
+      } else if (data && data.models && Array.isArray(data.models)) {
+        // Fallback for some ollama raw APIs
+        const models = data.models.map((m: any) => m.name);
+        setAvailableModels(models);
+        if (models.length > 0 && !models.includes(modelName)) {
+           setModelName(models[0]);
+        }
+      } else {
+        throw new Error("Invalid model response format");
+      }
+    } catch (err: any) {
+      setModelError(`${err.message || "Failed"}. Check that Ollama/LM Studio is running and CORS is allowed (OLLAMA_ORIGINS="*"). If using Safari, Safari blocks local HTTP requests from HTTPS sites. Use Chrome or export the app and run locally!`);
+    } finally {
+      setIsFetchingModels(false);
+    }
+  };
+
+  const handleSave = () => {
+    localStorage.setItem('llm_provider', provider);
+    localStorage.setItem('llm_base_url', baseUrl);
+    localStorage.setItem('llm_model', modelName);
+    onClose();
+  };
 
   return (
     <div
@@ -7486,11 +9872,8 @@ const ApiKeyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2
-            id="apiKeyModalTitle"
-            className="text-xl font-semibold text-slate-200"
-          >
-            API Key Configuration
+          <h2 id="apiKeyModalTitle" className="text-xl font-semibold text-slate-200">
+            AI Provider Configuration
           </h2>
           <button
             onClick={onClose}
@@ -7500,36 +9883,78 @@ const ApiKeyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
             <XIcon className="w-6 h-6" />
           </button>
         </div>
+        
         <div className="space-y-4 text-slate-300 text-sm">
-          <p>
-            This application is configured to use a Google Gemini API key from a
-            secure environment variable (
-            <code className="bg-dark-300 text-sky-300 px-1 py-0.5 rounded text-xs">
-              process.env.API_KEY
-            </code>
-            ).
-          </p>
-          <p>
-            For security and best practices, the API key cannot be entered
-            directly in the browser.
-          </p>
-          <p>
-            The key is managed externally by the application's hosting
-            environment. Please ensure the{" "}
-            <code className="bg-dark-300 text-sky-300 px-1 py-0.5 rounded text-xs">
-              API_KEY
-            </code>{" "}
-            is set up there for the app to function correctly.
-          </p>
-          <a
-            href="https://aistudio.google.com/app/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center font-medium text-sky-400 hover:text-sky-300"
-          >
-            Get your API key from Google AI Studio{" "}
-            <ExternalLinkIcon className="w-4 h-4 ml-2" />
-          </a>
+          <div>
+            <label className="block text-sm font-medium mb-1">Provider</label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              className="w-full bg-dark-300 border-dark-300/50 rounded-md p-2 text-slate-200 focus:ring-sky-500"
+            >
+              <option value="gemini">Google Gemini (Server Key)</option>
+              <option value="local">Local LLM (OpenAI Compatible, e.g., LM Studio, Ollama)</option>
+            </select>
+          </div>
+
+          {provider === 'local' && (
+            <div className="space-y-3 mt-4 border-t border-dark-300 pt-4">
+               <div>
+                  <label className="block text-sm font-medium mb-1">Base URL</label>
+                  <input
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    className="w-full bg-dark-300 border-dark-300/50 rounded-md p-2 text-slate-200"
+                    placeholder="http://localhost:11434/v1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Ollama: http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
+                  <p className="text-xs text-amber-500/80 mt-1">Note: Safari strictly blocks mixed content (HTTPS site calling HTTP localhost). Try using Chrome, or use ngrok if on Mac.</p>
+               </div>
+               <div className="flex flex-col">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium">Model Name</label>
+                    <button type="button" onClick={fetchModels} disabled={isFetchingModels} className="text-xs text-sky-400 hover:text-sky-300 disabled:opacity-50">
+                      {isFetchingModels ? "Fetching..." : "Fetch Models"}
+                    </button>
+                  </div>
+                  {availableModels.length > 0 ? (
+                    <select
+                      value={modelName}
+                      onChange={(e) => setModelName(e.target.value)}
+                      className="w-full bg-dark-300 border-dark-300/50 rounded-md p-2 text-slate-200 focus:ring-sky-500 focus:border-sky-500"
+                    >
+                      {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={modelName}
+                      onChange={(e) => setModelName(e.target.value)}
+                      className="w-full bg-dark-300 border-dark-300/50 rounded-md p-2 text-slate-200 focus:ring-sky-500 focus:border-sky-500"
+                      placeholder="llama3"
+                    />
+                  )}
+                  {modelError && <p className="text-xs text-rose-400 mt-1">{modelError}</p>}
+               </div>
+            </div>
+          )}
+
+          {provider === 'gemini' && (
+            <p className="text-xs text-slate-400 mt-2">
+              Gemini API Key is managed securely by the environment variables (process.env.API_KEY).
+              <br /> <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-sky-400">Get your key from AI Studio</a>
+            </p>
+          )}
+
+          <div className="pt-4 flex justify-end">
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded font-medium transition-colors"
+            >
+              Save Configuration
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -7866,6 +10291,7 @@ export default function App() {
       { id: "pos_entry", name: "POS Entry", icon: <Receipt className="w-8 h-8"/>, desc: "Process POS terminal entries" },
       { id: "pos_report", name: "POS Report", icon: <FileBarChart className="w-8 h-8"/>, desc: "Generate Point of Sale reports" },
       { id: "smart_merge", name: "Smart Merge", icon: <Sparkles className="w-8 h-8"/>, desc: "AI-powered PDF merging and sorting" },
+      { id: "bahrain_cust_payment", name: "Bahrain CustPayment", icon: <FileText className="w-8 h-8"/>, desc: "Process emails to Excel for Bahrain CustPayment" },
     ];
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
@@ -7945,6 +10371,9 @@ export default function App() {
         {mode === "pos_entry" && <POSEntryAutomation />}
         {mode === "pos_report" && <POSReport />}
         {mode === "smart_merge" && <SmartMergeAutomation />}
+        {mode === "bahrain_cust_payment" && <BahrainCustPaymentAutomation />}
+
+        <Chatbot currentMode={mode} />
 
         <footer className="text-center mt-12 text-slate-500">
           <p>Powered by React, Tailwind CSS, and Google Gemini</p>

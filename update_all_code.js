@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const outputFile = 'components/all_code.txt';
+const outputFiles = ['components/all_code.txt', 'all_code.txt'];
 const filesToInclude = [
   'package.json',
   'tsconfig.json',
@@ -31,5 +31,7 @@ for (const file of filesToInclude) {
   }
 }
 
-fs.writeFileSync(outputFile, output);
-console.log('all_code.txt updated!');
+for (const outputFile of outputFiles) {
+  fs.writeFileSync(outputFile, output);
+}
+console.log('all_code.txt updated in both locations!');

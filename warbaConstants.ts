@@ -33,7 +33,7 @@ export const WARBA_BANK_INFO: CloverBankInfo[] = [
         projectId: "104" 
     },
     { 
-        accountName: "MEWL POLYCLINIC", 
+        accountName: "MEDWELL POLYCLINIC", 
         oldAccountNo: "11010236601", 
         accountNo: "KIBML-6601", 
         activities: "1205", 
@@ -118,7 +118,9 @@ export const WARBA_VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",

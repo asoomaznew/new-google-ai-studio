@@ -10,11 +10,14 @@ export interface ProcessingResult {
   blob: Blob;
   matched: boolean;
   matchedCsvRows: number;
+  matchedEmailsCount?: number;
+  matchedEmailNames?: string[];
 }
 
 interface BatchData {
   name: string;
   descId: string;
+  unitId: string;
   pages: number[];
   fullText: string;
 }
@@ -265,10 +268,195 @@ async function appendCsvPages(outputPdf: PDFDocument, matchedRows: any[], batchN
   });
 }
 
+function extractAmounts(text: string): number[] {
+  const matches = text.match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,3})?\b/g);
+  if (!matches) return [];
+  
+  const amounts: number[] = [];
+  for (const m of matches) {
+    const val = parseFloat(m.replace(/,/g, ''));
+    if (isNaN(val)) continue;
+    
+    // Filter out years
+    if (val >= 2020 && val <= 2030) continue; 
+    
+    // If it's a whole number, it needs to be reasonably large but not huge (like an account number)
+    if (!m.includes('.')) {
+      if (val < 50 || val > 50000) continue; 
+    }
+    
+    amounts.push(val);
+  }
+  return amounts;
+}
+
+function isEmailPdfMatch(
+  batchNum: string,
+  descId: string,
+  unitId: string,
+  batchName: string,
+  fullText: string,
+  emailText: string,
+  emailFileName: string
+): boolean {
+  
+  const emailTextLower = emailText.toLowerCase();
+  const emailFileNameLower = emailFileName.toLowerCase();
+  const fullTextLower = fullText.toLowerCase();
+
+  // 0. Strong Amount Match Filter
+  const journalAmounts = extractAmounts(fullTextLower);
+  const emailAmounts = extractAmounts(emailTextLower);
+  
+  let amountMatch = false;
+  if (journalAmounts.length > 0 && emailAmounts.length > 0) {
+    for (const ja of journalAmounts) {
+       for (const ea of emailAmounts) {
+         if (Math.abs(ja - ea) < 1.0) {
+           amountMatch = true;
+           break;
+         }
+       }
+       if (amountMatch) break;
+    }
+  } else {
+    // If no valid amounts found in either, allow it to proceed to text matching
+    amountMatch = true;
+  }
+  
+  if (!amountMatch) return false;
+
+
+  // Use unitId in matching
+  if (unitId && unitId.length > 0) {
+      const unitIdLower = unitId.toLowerCase();
+      // If unitId is present in journal, it should ideally be in the email
+      if (!emailTextLower.includes(unitIdLower) && !emailFileNameLower.includes(unitIdLower)) {
+          return false;
+      }
+  }
+
+  // 1. Direct match on Description ID (e.g. CRNOTE-WR-55018, WT-44910, KIBYR-4765)
+  if (descId) {
+    const descIdLower = descId.toLowerCase().trim();
+    if (descIdLower.length > 3) {
+      if (emailTextLower.includes(descIdLower) || emailFileNameLower.includes(descIdLower)) {
+        return true;
+      }
+      
+      // Match normalized description (e.g. ignoring dashes or spaces)
+      const descIdNorm = descIdLower.replace(/[^a-z0-9]/g, '');
+      const emailTextNorm = emailTextLower.replace(/[^a-z0-9]/g, '');
+      const emailFileNameNorm = emailFileNameLower.replace(/[^a-z0-9]/g, '');
+      if (descIdNorm.length >= 4 && (emailTextNorm.includes(descIdNorm) || emailFileNameNorm.includes(descIdNorm))) {
+        return true;
+      }
+    }
+
+    // Try extracting alphanumeric parts (e.g. WR-55018 -> WR, 55018)
+    const refMatch = descId.match(/(?:KIB|WR|WT|CRNOTE-WR)[A-Z]*\s*[- ]?\s*(\d{4,5})/i);
+    if (refMatch) {
+      const fullRef = refMatch[0].toLowerCase();
+      const numPart = refMatch[1];
+      if (emailTextLower.includes(fullRef) || emailFileNameLower.includes(fullRef)) {
+        return true;
+      }
+      if (numPart && numPart.length >= 4 && (emailTextLower.includes(numPart) || emailFileNameLower.includes(numPart))) {
+        // Verify if clinic name is also present in the email to avoid false positives on random numbers
+        const nameParts = batchName.split('-');
+        const clinicName = nameParts[0].toLowerCase().trim();
+        if (clinicName.length > 3 && (emailTextLower.includes(clinicName) || emailFileNameLower.includes(clinicName))) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Match on Batch Number
+  if (batchNum && batchNum.length > 3) {
+    const batchNumLower = batchNum.toLowerCase();
+    if (emailTextLower.includes(batchNumLower) || emailFileNameLower.includes(batchNumLower)) {
+      return true;
+    }
+  }
+
+  // 3. Match on clinic/merchant name and voucher numbers from full text
+  // Avoid using generic terms like Cus_Rec as the clinic name
+  let clinicName = "";
+  if (descId) {
+    clinicName = descId.split('-')[0].toLowerCase().trim();
+  } else {
+    const nameParts = batchName.split('-');
+    clinicName = nameParts.length > 1 && nameParts[0].toLowerCase().includes('cus_rec') ? nameParts[1].toLowerCase().trim() : nameParts[0].toLowerCase().trim();
+  }
+
+  const genericNames = ['cus_rec', 'pos', 'knet', 'cash', 'bank', 'transfer'];
+  if (clinicName.length > 3 && !genericNames.includes(clinicName)) {
+    if (emailTextLower.includes(clinicName) || emailFileNameLower.includes(clinicName)) {
+      
+      // If clinic name matches, check if we find any specific reference number from the journal page in the email
+      let matchedOnNumber = false;
+      if (descId) {
+        const numbers = descId.match(/\d+/g);
+        if (numbers) {
+          for (const num of numbers) {
+            // Ignore years to prevent false positive matches across all emails
+            if (num.length >= 4 && num !== "2023" && num !== "2024" && num !== "2025" && num !== "2026" && num !== "2027") {
+              if (emailTextLower.includes(num) || emailFileNameLower.includes(num)) {
+                matchedOnNumber = true;
+                return true;
+              }
+            }
+          }
+        }
+      }
+      
+      // If no specific reference number matched, we can still match if the clinic name is a strong match
+      // and we don't have conflicting information
+      if (!matchedOnNumber) {
+        // Also check if any account number or keyword from the full text is found in the email
+        const accountMatches = fullTextLower.match(/\b\d{10,12}\b/g) || fullTextLower.match(/(?:KIB[A-Z0-9-]*)/gi);
+        if (accountMatches) {
+          for (const acc of accountMatches) {
+            const cleanAcc = acc.toLowerCase();
+            if (cleanAcc.length >= 4 && emailTextLower.includes(cleanAcc)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Phrase matching (e.g. for "Mira Packaging" from "Mira Packaging Factory-Rent: Rent July 2026 Billing")
+  if (descId) {
+    const descIdClean = descId.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+    const stopwords = new Set(['for', 'the', 'and', 'with', 'from', 'month', 'year', 'rent', 'billing', 'invoice']);
+    const descWords = descIdClean.split(/\s+/).filter(w => w.length > 2 && !stopwords.has(w));
+    
+    // Check for 2+ consecutive words matching
+    for (let i = 0; i < descWords.length - 1; i++) {
+      const phrase = `${descWords[i]} ${descWords[i+1]}`;
+      // Exclude overly generic phrases to avoid false positives
+      const genericWords = "january|february|march|april|may|june|july|august|september|october|november|december|rent|billing|invoice|payment|receipt|deposit|slip|year|month|company|co|ltd|wll|spc|est|trading|factory|\\d+";
+      const isDateOrGeneric = new RegExp('^(' + genericWords + ')\\s+(' + genericWords + ')$', 'i').test(phrase);
+      
+      if (!isDateOrGeneric) {
+        if (emailFileNameLower.includes(phrase) || emailTextLower.includes(phrase)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function processFiles(
   mainPdfFile: File,
   bankStatements: File[],
   csvFiles: File[],
+  emailFiles: File[] = [],
   onProgress: (msg: string) => void
 ): Promise<ProcessingResult[]> {
   onProgress("Loading PDF toolset...");
@@ -338,6 +526,7 @@ export async function processFiles(
       batches[currentBatchNum] = {
         name: pageName,
         descId: currentDescId,
+        unitId: "",
         pages: [],
         fullText: ""
       };
@@ -348,8 +537,39 @@ export async function processFiles(
       batches[currentBatchNum].descId = currentDescId;
     }
 
+    // Extract unitId
+    const unitMatch = text.match(/(?:unit\s*[#]?\s*([a-z0-9-]+))/i);
+    if (unitMatch && unitMatch[1]) {
+        batches[currentBatchNum].unitId = unitMatch[1];
+    }
+
     batches[currentBatchNum].pages.push(i - 1);
     batches[currentBatchNum].fullText += "\n" + text;
+  }
+
+  // Extract text from Email PDFs
+  const emailTexts: { file: File; text: string }[] = [];
+  if (emailFiles.length > 0) {
+    onProgress("Analyzing Email PDFs...");
+    for (let eIdx = 0; eIdx < emailFiles.length; eIdx++) {
+      const emailFile = emailFiles[eIdx];
+      onProgress(`Reading Email PDF ${eIdx + 1} of ${emailFiles.length}: ${emailFile.name}`);
+      try {
+        const emailBuffer = await emailFile.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: emailBuffer.slice(0) }).promise;
+        let fullEmailText = "";
+        for (let p = 1; p <= doc.numPages; p++) {
+          const page = await doc.getPage(p);
+          const textContent = await page.getTextContent();
+          const text = textContent.items.map((item: any) => (item as any).str).join(' ');
+          fullEmailText += "\n" + text;
+        }
+        emailTexts.push({ file: emailFile, text: fullEmailText });
+      } catch (err) {
+        console.error(`Failed to extract text from email PDF ${emailFile.name}:`, err);
+        emailTexts.push({ file: emailFile, text: "" });
+      }
+    }
   }
 
   // Aggregate CSV Data
@@ -423,6 +643,14 @@ export async function processFiles(
       });
     }
 
+    // Find matching Email PDFs
+    const matchedEmailFiles: File[] = [];
+    for (const item of emailTexts) {
+      if (isEmailPdfMatch(batchNum, data.descId, data.unitId, data.name, data.fullText, item.text, item.file.name)) {
+        matchedEmailFiles.push(item.file);
+      }
+    }
+
     // Copy original pages
     const copiedMainPages = await outputPdf.copyPages(srcPdf, data.pages);
     copiedMainPages.forEach(p => outputPdf.addPage(p));
@@ -436,20 +664,51 @@ export async function processFiles(
       matched = true;
     }
 
+    // Append matched Email PDFs
+    let matchedEmailsCount = 0;
+    const matchedEmailNames: string[] = [];
+    for (const emailFile of matchedEmailFiles) {
+      try {
+        const emailBuffer = await emailFile.arrayBuffer();
+        const emailPdf = await PDFDocument.load(emailBuffer);
+        const copiedEmailPages = await outputPdf.copyPages(emailPdf, emailPdf.getPageIndices());
+        copiedEmailPages.forEach(p => outputPdf.addPage(p));
+        matchedEmailsCount++;
+        matchedEmailNames.push(emailFile.name);
+      } catch (err) {
+        console.error(`Failed to append email PDF ${emailFile.name}:`, err);
+      }
+    }
+
     // append matched CSV transaction data pages to the PDF
     if (matchedRows.length > 0) {
       await appendCsvPages(outputPdf, matchedRows, data.name);
     }
 
     const pdfBytes = await outputPdf.save();
-    let suffix = matched && matchedRows.length > 0 ? "_FullMatched" : matched ? "_StatementMatch" : matchedRows.length > 0 ? "_CSVMatch" : "";
+    
+    // Calculate final descriptive filename suffix
+    let suffixParts: string[] = [];
+    if (matched) suffixParts.push("StatementMatch");
+    if (matchedRows.length > 0) suffixParts.push("CSVMatch");
+    if (matchedEmailsCount > 0) suffixParts.push("EmailMatch");
+    
+    let suffix = "";
+    if (suffixParts.length === 3) {
+      suffix = "_FullMatched";
+    } else if (suffixParts.length > 0) {
+      suffix = "_" + suffixParts.join("_");
+    }
+
     const fileName = `${data.name}${suffix}.pdf`.replace(/[\\/:*?"<>|]/g, "_").trim();
     
     results.push({
       fileName,
       blob: new Blob([pdfBytes], { type: 'application/pdf' }),
       matched,
-      matchedCsvRows: matchedRows.length
+      matchedCsvRows: matchedRows.length,
+      matchedEmailsCount,
+      matchedEmailNames
     });
   }
 

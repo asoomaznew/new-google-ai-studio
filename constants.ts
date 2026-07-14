@@ -15,9 +15,9 @@ export const CLOVER_BANK_INFO: CloverBankInfo[] = [
     { accountName: "YARROW POLYCLINIC", oldAccountNo: "011010234765", accountNo: "KIBYR-4765", activities: "1198", propertyId: "CLO3", country: "01", departments: "113", projectId: "104" },
     { accountName: "YARROW POLYCLINIC", oldAccountNo: "011010234773", accountNo: "KIBYR-4773", activities: "1198", propertyId: "CLO3", country: "01", departments: "113", projectId: "104" },
     
-    // MEWL POLYCLINIC
-    { accountName: "MEWL POLYCLINIC", oldAccountNo: "011010236601", accountNo: "KIBML-6601", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
-    { accountName: "MEWL POLYCLINIC", oldAccountNo: "011010236610", accountNo: "KIBML-6610", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
+    // MEDWELL POLYCLINIC
+    { accountName: "MEDWELL POLYCLINIC", oldAccountNo: "011010236601", accountNo: "KIBML-6601", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
+    { accountName: "MEDWELL POLYCLINIC", oldAccountNo: "011010236610", accountNo: "KIBML-6610", activities: "1205", propertyId: "CLO4", country: "01", departments: "113", projectId: "104" },
     
     // FOURTH MEDICAL CENTER
     { accountName: "FOURTH MEDICAL CENTER", oldAccountNo: "011010198602", accountNo: "KIBFR-8602", activities: "1195", propertyId: "CLO5", country: "01", departments: "113", projectId: "104" },
@@ -59,7 +59,9 @@ export const VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",
@@ -102,7 +104,7 @@ export const WARBA_BANK_INFO: CloverBankInfo[] = [
         projectId: "104" 
     },
     { 
-        accountName: "MEWL POLYCLINIC", 
+        accountName: "MEDWELL POLYCLINIC", 
         oldAccountNo: "11010236601", 
         accountNo: "KIBML-6601", 
         activities: "1205", 
@@ -187,7 +189,9 @@ export const WARBA_VENDOR_OFFSET_ACCOUNTS: VendorOffsetAccounts = {
     "AL ASEEL INTERNATIONAL POLYCLINIC": "50-000010",
     "IRIS POLYCLINIC": "50-000004",
     "YARROW POLYCLINIC": "50-000005",
-    "MEWL POLYCLINIC": "50-000011",
+    "MEDWELL POLYCLINIC": "50-000011",
+    "Medwell POLYCLINIC": "50-000011",
+    "Medwell Medical Polyclinic": "50-000011",
     "FOURTH MEDICAL CENTER": "50-000009",
     "JOYA POLYCLINIC": "50-000002",
     "MEDICAL HARBOUR CENTER": "50-000008",

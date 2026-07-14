@@ -19,7 +19,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const modelsChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
 
-const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
+export const generateContentWithRetry = async (aiParams: any, maxRetries = 3): Promise<any> => {
     const config = typeof window !== 'undefined' ? getLLMConfig() : { provider: 'gemini', baseUrl: '', modelName: '' };
     if (config.provider === 'local') {
         return callLocalLLM(aiParams.contents, aiParams.config?.responseSchema, config.modelName, config.baseUrl);
